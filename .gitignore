@@ -1,0 +1,25 @@
+# Compiled object files and binaries
+*.o
+*.out
+*.obj
+*.exe
+*.a
+*.so
+
+# Backup files
+*~
+*.bak
+*.swp
+*.tmp
+
+# LaTeX build files
+*.aux
+*.log
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
