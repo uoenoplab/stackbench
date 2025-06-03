@@ -1,10 +1,13 @@
-## XXX
+## Opening Up Kernel-Bypass TCP Stacks
 
-## Raw data
+*Under construction*
 
-## Stacks
-- mTCP
-- TAS
+## Modified Stacks
+- src/mtcp
+- src/tas
+
+## Server tool
+- src/httpd
 
 ## Client tool
-- wrk
+- src/wrk

@@ -1,0 +1,343 @@
+#include <mtcp_api.h>
+#include <mtcp_epoll.h>
+#include <stdlib.h>
+#include <time.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include "wrk.h"
+#include "script.h"
+#include "net.h"
+
+#define IP_RANGE 1
+
+static in_addr_t daddr;
+static in_port_t dport;
+static in_addr_t saddr;
+
+typedef struct aeApiState {
+  mctx_t mctx;  
+    int epfd;
+    struct mtcp_epoll_event *events;
+} aeApiState;
+
+static status mtcp_sock_read(aeEventLoop *loop, connection *c, size_t *n) {
+    aeApiState *state = loop->apidata;
+    ssize_t r = mtcp_read(state->mctx, c->fd, c->buf, sizeof(c->buf));
+    *n = (size_t) r;
+    return r >= 0 ? OK : ERROR;
+}
+
+static status mtcp_sock_write(aeEventLoop *loop, connection *c, char *buf, size_t len, size_t *n) {
+    aeApiState *state = loop->apidata;
+    ssize_t r;
+    if ((r = mtcp_write(state->mctx, c->fd, buf, len)) == -1) {
+        switch (errno) {
+            case EAGAIN: return RETRY;
+            default:     return ERROR;
+        }
+    }
+    *n = (size_t) r;
+    return OK;
+}
+
+static void mtcp_connected(aeEventLoop *loop, int fd, void *data, int mask);
+static void mtcp_writeable(aeEventLoop *loop, int fd, void *data, int mask);
+
+static int connect_mtcp(thread *thread, connection *c) {
+    struct addrinfo *addr = thread->addr;
+    struct aeEventLoop *loop = thread->loop;
+    aeApiState *state = loop->apidata;
+    int fd, flags;
+    int ret;    
+
+    fd = mtcp_socket(state->mctx, addr->ai_family, addr->ai_socktype, 0 /*addr->ai_protocol*/);
+
+    ret = mtcp_setsock_nonblock(state->mctx, fd);
+    if (ret < 0) {
+      goto error;
+    }
+    // flags = fcntl(fd, F_GETFL, 0);
+    // fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+    if (mtcp_connect(state->mctx, fd, addr->ai_addr, addr->ai_addrlen) == -1) {
+        if (errno != EINPROGRESS) goto error;
+    }
+
+    flags = 1;
+    // setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flags, sizeof(flags));
+
+    flags = AE_READABLE | AE_WRITABLE;
+    if (aeCreateFileEvent(loop, fd, flags, mtcp_connected, c) == AE_OK) {
+        c->parser.data = c;
+        c->fd = fd;
+        return fd;
+    }
+
+  error:
+    thread->errors.connect++;
+    mtcp_close(state->mctx, fd);
+    return -1;
+}
+
+static int reconnect_mtcp(thread *thread, connection *c) {
+    aeApiState *state = thread->loop->apidata;
+    aeDeleteFileEvent(thread->loop, c->fd, AE_WRITABLE | AE_READABLE);
+    //sock.close(c);
+    mtcp_close(state->mctx, c->fd);
+    return connect_mtcp(thread, c);
+}
+
+static int mtcp_delay_request(aeEventLoop *loop, long long id, void *data) {
+    connection *c = data;
+    c->delayed = false;
+    aeCreateFileEvent(loop, c->fd, AE_WRITABLE, mtcp_writeable, c);
+    return AE_NOMORE;
+}
+
+static void mtcp_writeable(aeEventLoop *loop, int fd, void *data, int mask) {
+    connection *c = data;
+    thread *thread = c->thread;
+
+    if (c->delayed) {
+        uint64_t delay = script_delay(thread->L);
+        aeDeleteFileEvent(loop, fd, AE_WRITABLE);
+        aeCreateTimeEvent(loop, delay, mtcp_delay_request, c, NULL);
+        return;
+    }
+
+    if (!c->written) {
+        if (cfg.dynamic) {
+            script_request(thread->L, &c->request, &c->length);
+        }
+        c->start   = time_us();
+        c->pending = cfg.pipeline;
+    }
+
+    char  *buf = c->request + c->written;
+    size_t len = c->length  - c->written;
+    size_t n;
+
+    switch (mtcp_sock_write(loop, c, buf, len, &n)) {
+        case OK:    break;
+        case ERROR: goto error;
+        case RETRY: return;
+    }
+
+    c->written += n;
+    if (c->written == c->length) {
+        c->written = 0;
+        aeDeleteFileEvent(loop, fd, AE_WRITABLE);
+    }
+
+    return;
+
+  error:
+    thread->errors.write++;
+    reconnect_mtcp(thread, c);
+}
+
+static void mtcp_readable(aeEventLoop *loop, int fd, void *data, int mask) {
+    connection *c = data;
+    size_t n;
+
+    do {
+      switch (mtcp_sock_read(loop, c, &n)) {
+            case OK:    break;
+            case ERROR: goto error;
+            case RETRY: return;
+        }
+
+        if (http_parser_execute(&c->parser, &parser_settings, c->buf, n) != n) goto error;
+        if (n == 0 && !http_body_is_final(&c->parser)) goto error;
+
+        c->thread->bytes += n;
+    } while (n == RECVBUF /*&& sock.readable(c) > 0*/);
+
+    return;
+
+  error:
+    c->thread->errors.read++;
+    reconnect_mtcp(c->thread, c);
+}
+
+static void mtcp_connected(aeEventLoop *loop, int fd, void *data, int mask) {
+    connection *c = data;
+
+    /*switch (sock.connect(c, cfg.host)) {
+        case OK:    break;
+        case ERROR: goto error;
+        case RETRY: return;
+	}*/
+
+    http_parser_init(&c->parser, HTTP_RESPONSE);
+    c->written = 0;
+
+    aeCreateFileEvent(c->thread->loop, fd, AE_READABLE, mtcp_readable, c);
+    aeCreateFileEvent(c->thread->loop, fd, AE_WRITABLE, mtcp_writeable, c);
+
+    return;
+
+    /*  error:
+    c->thread->errors.connect++;
+    reconnect_mtcp(c->thread, c);*/
+}
+
+static char *copy_url_part(char *url, struct http_parser_url *parts, enum http_parser_url_fields field) {
+    char *part = NULL;
+
+    if (parts->field_set & (1 << field)) {
+        uint16_t off = parts->field_data[field].off;
+        uint16_t len = parts->field_data[field].len;
+        part = zcalloc(len + 1 * sizeof(char));
+        memcpy(part, &url[off], len);
+    }
+
+    return part;
+}
+
+int aeInit(char *url, struct http_parser_url *parts, struct socket *socket) {
+  struct mtcp_conf mcfg;
+  int ret;
+  char *host    = copy_url_part(url, parts, UF_HOST);
+  char *port    = copy_url_part(url, parts, UF_PORT);
+  int max_fds = (10 + cfg.connections * 3) / cfg.threads;
+
+  mtcp_getconf(&mcfg);
+  mcfg.num_cores = cfg.threads;
+  mcfg.max_concurrency = max_fds;
+  mcfg.max_num_buffers = max_fds;
+  mtcp_setconf(&mcfg);
+
+  ret = mtcp_init("client.conf");
+  if (ret < 0) {
+    fprintf(stderr, "Failed to initialize mtcp.\n");
+    return ret;
+  }
+
+  daddr = inet_addr(host);
+  dport = htons(atoi(port));
+  saddr = INADDR_ANY;
+
+  socket->connect = connect_mtcp;
+  socket->readable = mtcp_readable;
+  socket->writeable = mtcp_writeable;
+  socket->reconnect = reconnect_mtcp;
+
+  return 0;
+}
+
+int aeThreadInit(thread *thread) {
+    int tid = thread->tid;
+    mtcp_core_affinitize(tid);
+    return 0;
+}
+
+static int aeApiCreate(aeEventLoop *eventLoop, int tid) {
+    aeApiState *state = zmalloc(sizeof(aeApiState));
+    if (!state) return -1;
+    eventLoop->apidata = state;
+
+    int maxevents = (eventLoop->setsize * 3) / cfg.threads;
+    state->events = zmalloc(sizeof(struct mtcp_epoll_event)*maxevents);
+    if (!state->events) {
+        zfree(state);
+        return -1;
+    }
+    state->mctx = mtcp_create_context(tid);
+    if (!state->mctx) {
+      return -1;
+    }
+
+    srand(time(NULL));
+    if (mtcp_init_rss(state->mctx, saddr, IP_RANGE, daddr, dport)) {
+      return -1;
+    }
+
+    state->epfd = mtcp_epoll_create(state->mctx, maxevents);
+    if (state->epfd == -1) {
+        zfree(state->events);
+        zfree(state);
+        return -1;
+    }
+    return 0;
+}
+
+static int aeApiResize(aeEventLoop *eventLoop, int setsize) {
+    aeApiState *state = eventLoop->apidata;
+
+    state->events = zrealloc(state->events, sizeof(struct mtcp_epoll_event)*setsize);
+    return 0;
+}
+
+static void aeApiFree(aeEventLoop *eventLoop) {
+    aeApiState *state = eventLoop->apidata;
+
+    // mtcp_close(state->mctx, state->epfd); /* seems not needed */
+    mtcp_destroy_context(state->mctx);
+    zfree(state->events);
+    zfree(state);
+}
+
+static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
+    aeApiState *state = eventLoop->apidata;
+    struct mtcp_epoll_event ee = {0}; /* avoid valgrind warning */
+    /* If the fd was already monitored for some event, we need a MOD
+     * operation. Otherwise we need an ADD operation. */
+    int op = eventLoop->events[fd].mask == AE_NONE ?
+            MTCP_EPOLL_CTL_ADD : MTCP_EPOLL_CTL_MOD;
+
+    ee.events = 0;
+    mask |= eventLoop->events[fd].mask; /* Merge old events */
+    if (mask & AE_READABLE) ee.events |= MTCP_EPOLLIN;
+    if (mask & AE_WRITABLE) ee.events |= MTCP_EPOLLOUT;
+    ee.data.sockid = fd;
+    if (mtcp_epoll_ctl(state->mctx, state->epfd,op,fd,&ee) == -1) return -1;
+    return 0;
+}
+
+static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
+    aeApiState *state = eventLoop->apidata;
+    struct mtcp_epoll_event ee = {0}; /* avoid valgrind warning */
+    int mask = eventLoop->events[fd].mask & (~delmask);
+
+    ee.events = 0;
+    if (mask & AE_READABLE) ee.events |= MTCP_EPOLLIN;
+    if (mask & AE_WRITABLE) ee.events |= MTCP_EPOLLOUT;
+    ee.data.sockid = fd;
+    if (mask != AE_NONE) {
+      mtcp_epoll_ctl(state->mctx, state->epfd,MTCP_EPOLL_CTL_MOD,fd,&ee);
+    } else {
+        /* Note, Kernel < 2.6.9 requires a non null event pointer even for
+         * EPOLL_CTL_DEL. */
+      mtcp_epoll_ctl(state->mctx, state->epfd,MTCP_EPOLL_CTL_DEL,fd,&ee);
+    }
+}
+
+static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
+    aeApiState *state = eventLoop->apidata;
+    int retval, numevents = 0;
+
+    retval = mtcp_epoll_wait(state->mctx, state->epfd,state->events,eventLoop->setsize,
+            {{ epoll_timeo|default("tvp ? (tvp->tv_sec*1000 + tvp->tv_usec/1000) : -1") }});
+    if (retval > 0) {
+        int j;
+
+        numevents = retval;
+        for (j = 0; j < numevents; j++) {
+            int mask = 0;
+            struct mtcp_epoll_event *e = state->events+j;
+
+            if (e->events & MTCP_EPOLLIN) mask |= AE_READABLE;
+            if (e->events & MTCP_EPOLLOUT) mask |= AE_WRITABLE;
+            if (e->events & MTCP_EPOLLERR) mask |= AE_WRITABLE;
+            if (e->events & MTCP_EPOLLHUP) mask |= AE_WRITABLE;
+            eventLoop->fired[j].fd = e->data.sockid;
+            eventLoop->fired[j].mask = mask;
+        }
+    }
+    return numevents;
+}
+
+static char *aeApiName(void) {
+    return "mtcp";
+}

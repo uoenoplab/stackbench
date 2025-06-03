@@ -23,3 +23,12 @@
 *.synctex.gz
 *.bbl
 *.blg
+
+# Emacs backup and autosave files
+*~
+\#*\#
+.\#*
+
+# General editor files
+.DS_Store
+Thumbs.db
