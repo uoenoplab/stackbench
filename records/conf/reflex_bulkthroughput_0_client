@@ -1,0 +1,377 @@
+[
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "wrk",
+        "time": "11:20:19.444817"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "wrk",
+        "time": "11:20:19.543343"
+    },
+    {
+        "command": "ethtool -l enp24s0f0",
+        "dir": "wrk",
+        "time": "11:20:19.642772"
+    },
+    {
+        "command": "ethtool -L enp24s0f0 combined 1 || :",
+        "dir": "wrk",
+        "time": "11:20:19.739367"
+    },
+    {
+        "command": "ethtool -l enp24s0f1",
+        "dir": "wrk",
+        "time": "11:20:19.846923"
+    },
+    {
+        "command": "ethtool -L enp24s0f1 combined 1 || :",
+        "dir": "wrk",
+        "time": "11:20:19.945242"
+    },
+    {
+        "command": "ethtool -l ens1f0",
+        "dir": "wrk",
+        "time": "11:20:20.051010"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1 || :",
+        "dir": "wrk",
+        "time": "11:20:20.148372"
+    },
+    {
+        "command": "ethtool -l ens1f1",
+        "dir": "wrk",
+        "time": "11:20:20.265061"
+    },
+    {
+        "command": "ethtool -L ens1f1 combined 1 || :",
+        "dir": "wrk",
+        "time": "11:20:20.427118"
+    },
+    {
+        "command": "modprobe -r nvme",
+        "dir": "wrk",
+        "time": "11:20:20.532066"
+    },
+    {
+        "command": "echo \"off\" > /sys/devices/system/cpu/smt/control",
+        "dir": "wrk",
+        "time": "11:20:21.178802"
+    },
+    {
+        "command": "lscpu | grep \"^Thread(s) per core\" | awk \"{ print \\$4}\"",
+        "dir": "wrk",
+        "time": "11:20:21.276002"
+    },
+    {
+        "command": "lscpu | grep \"^CPU(s)\" | awk \"{ print \\$2}\"",
+        "dir": "wrk",
+        "time": "11:20:21.405723"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu",
+        "dir": "wrk",
+        "time": "11:20:21.533428"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/online",
+        "dir": "wrk",
+        "time": "11:20:21.632216"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q mitigations=off",
+        "dir": "wrk",
+        "time": "11:20:55.444702"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q intel_pstate=no_hwp",
+        "dir": "wrk",
+        "time": "11:20:55.548123"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null 2>&1 || :",
+        "dir": "wrk",
+        "time": "11:20:55.647551"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpuidle/current_driver",
+        "dir": "wrk",
+        "time": "11:20:55.743596"
+    },
+    {
+        "command": "echo powersave | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "wrk",
+        "time": "11:20:55.841682"
+    },
+    {
+        "command": "echo performance | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "wrk",
+        "time": "11:20:55.998598"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "wrk",
+        "time": "11:20:56.124330"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/cpuidle/state1/disable",
+        "dir": "wrk",
+        "time": "11:20:56.222130"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "dir": "wrk",
+        "time": "11:20:56.327127"
+    },
+    {
+        "command": "modprobe nvme",
+        "dir": "wrk",
+        "time": "11:20:56.427121"
+    },
+    {
+        "command": "ip -4 address show ens1f0",
+        "dir": "wrk",
+        "time": "11:20:57.825596"
+    },
+    {
+        "command": "ip link set ens1f0 up",
+        "dir": "wrk",
+        "time": "11:20:57.928455"
+    },
+    {
+        "command": "ethtool  ens1f0 | grep \"Link detected:\"",
+        "dir": "wrk",
+        "time": "11:20:58.030782"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1",
+        "dir": "wrk",
+        "time": "11:20:58.132176"
+    },
+    {
+        "command": "cat /proc/interrupts | grep ens1f0-TxRx-",
+        "dir": "wrk",
+        "time": "11:20:58.236077"
+    },
+    {
+        "command": "echo 0 > /proc/irq/66/smp_affinity_list",
+        "dir": "wrk",
+        "time": "11:20:58.391043"
+    },
+    {
+        "command": "ethtool -G ens1f0 rx 2048",
+        "dir": "wrk",
+        "time": "11:20:58.519317"
+    },
+    {
+        "command": "ethtool -G ens1f0 tx 2048",
+        "dir": "wrk",
+        "time": "11:20:58.624311"
+    },
+    {
+        "command": "ethtool -C ens1f0 adaptive-rx off rx-usecs 0",
+        "dir": "wrk",
+        "time": "11:20:58.729050"
+    },
+    {
+        "command": "ethtool -C ens1f0 adaptive-tx off tx-usecs 0",
+        "dir": "wrk",
+        "time": "11:20:58.831840"
+    },
+    {
+        "command": "ethtool -K ens1f0 tso off",
+        "dir": "wrk",
+        "time": "11:20:58.970374"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "11:20:59.373879"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "11:21:02.726832"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "11:21:08.902993"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "11:21:15.078959"
+    },
+    {
+        "command": "! test -e /tmp/screen_27Dec23_11_21_15_139899022060848.log",
+        "dir": "wrk",
+        "time": "11:21:15.751899"
+    },
+    {
+        "command": "screen -dmS 27Dec23_11_21_15_139899022060848 -L -Logfile /tmp/screen_27Dec23_11_21_15_139899022060848.log sh -c \"mpstat -P ALL 2\"",
+        "dir": "wrk",
+        "time": "11:21:15.846798"
+    },
+    {
+        "command": "screen -S 27Dec23_11_21_15_139899022060848 -X logfile flush 0",
+        "dir": "wrk",
+        "time": "11:21:15.949271"
+    },
+    {
+        "command": "nstat -rn",
+        "dir": "wrk",
+        "time": "11:21:16.046508"
+    },
+    {
+        "command": "! test -e /tmp/screen_27Dec23_11_21_16_139899022486688.log",
+        "dir": "wrk",
+        "time": "11:21:16.146587"
+    },
+    {
+        "command": "screen -dmS 27Dec23_11_21_16_139899022486688 -L -Logfile /tmp/screen_27Dec23_11_21_16_139899022486688.log sh -c \"ulimit -n 1048576;  ./wrk --latency -d 8 -c 1 -t 1 http://192.168.11.154:80/; sleep 3\"",
+        "dir": "wrk",
+        "time": "11:21:16.241700"
+    },
+    {
+        "command": "screen -S 27Dec23_11_21_16_139899022486688 -X logfile flush 0",
+        "dir": "wrk",
+        "time": "11:21:16.343918"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:16.444867"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:17.546680"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:18.650114"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:19.751271"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:20.855699"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:21.956805"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:23.059226"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:24.161412"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:25.264346"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:26.363117"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:27.460113"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:27.557018"
+    },
+    {
+        "command": "test -e /tmp/screen_27Dec23_11_21_16_139899022486688.log",
+        "dir": "wrk",
+        "time": "11:21:27.656590"
+    },
+    {
+        "command": "cat /tmp/screen_27Dec23_11_21_16_139899022486688.log",
+        "dir": "wrk",
+        "time": "11:21:27.751269"
+    },
+    {
+        "command": "rm /tmp/screen_27Dec23_11_21_16_139899022486688.log",
+        "dir": "wrk",
+        "time": "11:21:27.847574"
+    },
+    {
+        "command": "screen -ls | grep 27Dec23_11_21_15_139899022060848 | cut -d. -f1",
+        "dir": "wrk",
+        "time": "11:21:30.126341"
+    },
+    {
+        "command": "ps h --ppid 151817 -o pid",
+        "dir": "wrk",
+        "time": "11:21:30.313168"
+    },
+    {
+        "command": "screen -S 27Dec23_11_21_15_139899022060848 -X stuff $'\\003'",
+        "dir": "wrk",
+        "time": "11:21:30.420808"
+    },
+    {
+        "command": "kill -0 151818 2>/dev/null",
+        "dir": "wrk",
+        "time": "11:21:30.522633"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "11:21:30.620129"
+    },
+    {
+        "command": "test -e /tmp/screen_27Dec23_11_21_15_139899022060848.log",
+        "dir": "wrk",
+        "time": "11:21:30.718053"
+    },
+    {
+        "command": "cat /tmp/screen_27Dec23_11_21_15_139899022060848.log",
+        "dir": "wrk",
+        "time": "11:21:30.813657"
+    },
+    {
+        "command": "rm /tmp/screen_27Dec23_11_21_15_139899022060848.log",
+        "dir": "wrk",
+        "time": "11:21:30.910608"
+    },
+    {
+        "command": "nstat -z 'Tcp*'",
+        "dir": "wrk",
+        "time": "11:21:31.004178"
+    },
+    {
+        "command": "ss --info --tcp '( sport = :http or dport = :http )'",
+        "dir": "wrk",
+        "time": "11:21:31.105164"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "wrk",
+        "time": "11:21:31.224184"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/cpuidle/state1/disable",
+        "dir": "wrk",
+        "time": "11:21:31.320648"
+    }
+]

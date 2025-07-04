@@ -1,0 +1,472 @@
+[
+    {
+        "command": "make -C apps/phttpd nophttpd",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:46:56.410630"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:46:58.926922"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:46:59.046298"
+    },
+    {
+        "command": "ethtool -l enp23s0f0np0",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:46:59.163673"
+    },
+    {
+        "command": "ethtool -L enp23s0f0np0 combined 1 || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:46:59.283501"
+    },
+    {
+        "command": "ethtool -l enp23s0f1np1",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:46:59.761564"
+    },
+    {
+        "command": "ethtool -L enp23s0f1np1 combined 1 || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:46:59.878260"
+    },
+    {
+        "command": "ethtool -l enp24s0f0",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:00.371378"
+    },
+    {
+        "command": "ethtool -L enp24s0f0 combined 1 || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:00.484203"
+    },
+    {
+        "command": "ethtool -l enp24s0f1",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:28.367744"
+    },
+    {
+        "command": "ethtool -L enp24s0f1 combined 1 || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:28.487605"
+    },
+    {
+        "command": "ethtool -l ens1f0",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:29.090510"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1 || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:29.207265"
+    },
+    {
+        "command": "ethtool -l ens1f1",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:29.508688"
+    },
+    {
+        "command": "ethtool -L ens1f1 combined 1 || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:29.623495"
+    },
+    {
+        "command": "modprobe -r nvme",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:29.902484"
+    },
+    {
+        "command": "echo \"off\" > /sys/devices/system/cpu/smt/control",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:30.589178"
+    },
+    {
+        "command": "lscpu | grep \"^Thread(s) per core\" | awk \"{ print \\$4}\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:30.701445"
+    },
+    {
+        "command": "lscpu | grep \"^CPU(s)\" | awk \"{ print \\$2}\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:30.869548"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:31.034044"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/online",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:47:31.146999"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q mitigations=off",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:08.441255"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q intel_pstate=no_hwp",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:08.558637"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null 2>&1 || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:08.669573"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpuidle/current_driver",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:08.779775"
+    },
+    {
+        "command": "echo powersave | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:08.891035"
+    },
+    {
+        "command": "echo performance | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:09.014144"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:09.130154"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:09.237463"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:09.344493"
+    },
+    {
+        "command": "modprobe nvme",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:09.451006"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:09.681323"
+    },
+    {
+        "command": "modprobe -r i40e",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:09.786787"
+    },
+    {
+        "command": "modprobe i40e",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:11.338303"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:11.870943"
+    },
+    {
+        "command": "ethtool -i enp23s0f0np0 | grep \"driver:\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:11.976567"
+    },
+    {
+        "command": "ethtool -i enp23s0f1np1 | grep \"driver:\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:12.078316"
+    },
+    {
+        "command": "ethtool -i enp24s0f0 | grep \"driver:\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:12.178899"
+    },
+    {
+        "command": "ethtool -i enp24s0f1 | grep \"driver:\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:12.278490"
+    },
+    {
+        "command": "ethtool -i ens1f0 | grep \"driver:\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:12.379198"
+    },
+    {
+        "command": "ethtool -i ens1f1 | grep \"driver:\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:12.478297"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:13.577575"
+    },
+    {
+        "command": "cat /sys/class/net/enp23s0f0np0/address",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:13.673949"
+    },
+    {
+        "command": "cat /sys/class/net/enp23s0f1np1/address",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:13.777367"
+    },
+    {
+        "command": "cat /sys/class/net/enp24s0f0/address",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:13.875062"
+    },
+    {
+        "command": "cat /sys/class/net/enp24s0f1/address",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:13.973740"
+    },
+    {
+        "command": "cat /sys/class/net/ens1f0/address",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:14.071958"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:14.171999"
+    },
+    {
+        "command": "modprobe -r i40e",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:14.270199"
+    },
+    {
+        "command": "modprobe i40e_netmap",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:14.561310"
+    },
+    {
+        "command": "ip -4 address show ens1f0",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.053920"
+    },
+    {
+        "command": "ip addr add 192.168.11.154/24 dev ens1f0",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.164725"
+    },
+    {
+        "command": "ip link set ens1f0 up",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.269778"
+    },
+    {
+        "command": "ethtool  ens1f0 | grep \"Link detected:\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.381264"
+    },
+    {
+        "command": "ethtool -A ens1f0 rx off",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.483502"
+    },
+    {
+        "command": "ethtool -A ens1f0 tx off",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.585133"
+    },
+    {
+        "command": "ethtool -K ens1f0 lro off",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.688295"
+    },
+    {
+        "command": "ethtool -K ens1f0 gro off",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.788314"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.888687"
+    },
+    {
+        "command": "cat /proc/interrupts | grep ens1f0-TxRx-",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:15.988191"
+    },
+    {
+        "command": "echo 0 > /proc/irq/66/smp_affinity_list",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:16.090111"
+    },
+    {
+        "command": "ethtool -G ens1f0 rx 2048",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:16.363850"
+    },
+    {
+        "command": "ethtool -G ens1f0 tx 2048",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:16.526876"
+    },
+    {
+        "command": "ethtool -K ens1f0 tso off",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:16.686531"
+    },
+    {
+        "command": "ethtool -X ens1f0 hkey 05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:00:00:00:00:00:00:00:00:00:00:00:00",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:16.788294"
+    },
+    {
+        "command": "! test -e /tmp/screen_02Jan24_18_48_35_139879443811824.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:35.590951"
+    },
+    {
+        "command": "screen -dmS 02Jan24_18_48_35_139879443811824 -L -Logfile /tmp/screen_02Jan24_18_48_35_139879443811824.log sh -c \"ulimit -n 1048576;  ./apps/phttpd/nophttpd -M -p 1  -l 64\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:35.691171"
+    },
+    {
+        "command": "screen -S 02Jan24_18_48_35_139879443811824 -X logfile flush 0",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:35.816090"
+    },
+    {
+        "command": "! test -e /tmp/screen_02Jan24_18_48_39_139879443317088.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:39.153472"
+    },
+    {
+        "command": "screen -dmS 02Jan24_18_48_39_139879443317088 -L -Logfile /tmp/screen_02Jan24_18_48_39_139879443317088.log sh -c \"mpstat -P ALL 2\"",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:39.255983"
+    },
+    {
+        "command": "screen -S 02Jan24_18_48_39_139879443317088 -X logfile flush 0",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:39.360269"
+    },
+    {
+        "command": "nstat -rn",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:39.462241"
+    },
+    {
+        "command": "screen -ls | grep 02Jan24_18_48_39_139879443317088 | cut -d. -f1",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:51.894310"
+    },
+    {
+        "command": "ps h --ppid 2036 -o pid",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:51.999651"
+    },
+    {
+        "command": "screen -S 02Jan24_18_48_39_139879443317088 -X stuff $'\\003'",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.109679"
+    },
+    {
+        "command": "kill -0 2037 2>/dev/null",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.211277"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.312801"
+    },
+    {
+        "command": "test -e /tmp/screen_02Jan24_18_48_39_139879443317088.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.414574"
+    },
+    {
+        "command": "cat /tmp/screen_02Jan24_18_48_39_139879443317088.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.512715"
+    },
+    {
+        "command": "rm /tmp/screen_02Jan24_18_48_39_139879443317088.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.612659"
+    },
+    {
+        "command": "nstat -z 'Tcp*'",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.711634"
+    },
+    {
+        "command": "ss --info --tcp '( sport = :http or dport = :http )'",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.815397"
+    },
+    {
+        "command": "screen -ls | grep 02Jan24_18_48_35_139879443811824 | cut -d. -f1",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:52.951996"
+    },
+    {
+        "command": "ps h --ppid 2017 -o pid",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:53.056249"
+    },
+    {
+        "command": "screen -S 02Jan24_18_48_35_139879443811824 -X stuff $'\\003'",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:53.161619"
+    },
+    {
+        "command": "kill -0 2018 2>/dev/null",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:53.263397"
+    },
+    {
+        "command": "kill -0 2018 2>/dev/null",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:54.362710"
+    },
+    {
+        "command": "kill -0 2018 2>/dev/null",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:55.466711"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:55.567535"
+    },
+    {
+        "command": "test -e /tmp/screen_02Jan24_18_48_35_139879443811824.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:55.667341"
+    },
+    {
+        "command": "cat /tmp/screen_02Jan24_18_48_35_139879443811824.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:55.763357"
+    },
+    {
+        "command": "rm /tmp/screen_02Jan24_18_48_35_139879443811824.log",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:55.860820"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:55.958925"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_mtcp_5.18/paste",
+        "time": "18:48:56.057270"
+    }
+]

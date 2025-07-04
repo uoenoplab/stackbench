@@ -1,0 +1,622 @@
+[
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "wrk",
+        "time": "07:25:34.971695"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "wrk",
+        "time": "07:25:35.079676"
+    },
+    {
+        "command": "ethtool -l enp24s0f0",
+        "dir": "wrk",
+        "time": "07:25:35.184486"
+    },
+    {
+        "command": "ethtool -L enp24s0f0 combined 1 || :",
+        "dir": "wrk",
+        "time": "07:25:35.285520"
+    },
+    {
+        "command": "ethtool -l enp24s0f1",
+        "dir": "wrk",
+        "time": "07:25:35.388462"
+    },
+    {
+        "command": "ethtool -L enp24s0f1 combined 1 || :",
+        "dir": "wrk",
+        "time": "07:25:35.490270"
+    },
+    {
+        "command": "ethtool -l ens1f0",
+        "dir": "wrk",
+        "time": "07:25:35.593881"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1 || :",
+        "dir": "wrk",
+        "time": "07:25:35.693510"
+    },
+    {
+        "command": "ethtool -l ens1f1",
+        "dir": "wrk",
+        "time": "07:25:35.960370"
+    },
+    {
+        "command": "ethtool -L ens1f1 combined 1 || :",
+        "dir": "wrk",
+        "time": "07:25:36.057755"
+    },
+    {
+        "command": "modprobe -r nvme",
+        "dir": "wrk",
+        "time": "07:25:36.160610"
+    },
+    {
+        "command": "echo \"off\" > /sys/devices/system/cpu/smt/control",
+        "dir": "wrk",
+        "time": "07:25:36.822920"
+    },
+    {
+        "command": "lscpu | grep \"^Thread(s) per core\" | awk \"{ print \\$4}\"",
+        "dir": "wrk",
+        "time": "07:25:36.920656"
+    },
+    {
+        "command": "lscpu | grep \"^CPU(s)\" | awk \"{ print \\$2}\"",
+        "dir": "wrk",
+        "time": "07:25:37.050092"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu",
+        "dir": "wrk",
+        "time": "07:25:37.160158"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/online",
+        "dir": "wrk",
+        "time": "07:25:37.261203"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/online",
+        "dir": "wrk",
+        "time": "07:25:37.363739"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q mitigations=off",
+        "dir": "wrk",
+        "time": "07:25:37.465896"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q intel_pstate=no_hwp",
+        "dir": "wrk",
+        "time": "07:25:37.657186"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null 2>&1 || :",
+        "dir": "wrk",
+        "time": "07:25:37.757217"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpuidle/current_driver",
+        "dir": "wrk",
+        "time": "07:25:37.859289"
+    },
+    {
+        "command": "echo powersave | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpufreq/scaling_governor",
+        "dir": "wrk",
+        "time": "07:25:37.959684"
+    },
+    {
+        "command": "echo performance | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpufreq/scaling_governor",
+        "dir": "wrk",
+        "time": "07:25:38.064091"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "wrk",
+        "time": "07:25:38.177756"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/cpuidle/state1/disable",
+        "dir": "wrk",
+        "time": "07:25:38.279578"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "dir": "wrk",
+        "time": "07:25:38.384001"
+    },
+    {
+        "command": "modprobe nvme",
+        "dir": "wrk",
+        "time": "07:25:38.484663"
+    },
+    {
+        "command": "ip -4 address show ens1f0",
+        "dir": "wrk",
+        "time": "07:25:39.859664"
+    },
+    {
+        "command": "ip link set ens1f0 up",
+        "dir": "wrk",
+        "time": "07:25:39.960388"
+    },
+    {
+        "command": "ethtool  ens1f0 | grep \"Link detected:\"",
+        "dir": "wrk",
+        "time": "07:25:40.124333"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 48",
+        "dir": "wrk",
+        "time": "07:25:40.257644"
+    },
+    {
+        "command": "cat /proc/interrupts | grep ens1f0-TxRx-",
+        "dir": "wrk",
+        "time": "07:25:40.594224"
+    },
+    {
+        "command": "echo 0 > /proc/irq/66/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:40.708410"
+    },
+    {
+        "command": "echo 1 > /proc/irq/67/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:40.805491"
+    },
+    {
+        "command": "echo 2 > /proc/irq/68/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:40.906393"
+    },
+    {
+        "command": "echo 3 > /proc/irq/69/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.007302"
+    },
+    {
+        "command": "echo 4 > /proc/irq/70/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.108211"
+    },
+    {
+        "command": "echo 5 > /proc/irq/168/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.209578"
+    },
+    {
+        "command": "echo 6 > /proc/irq/169/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.308936"
+    },
+    {
+        "command": "echo 7 > /proc/irq/170/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.410457"
+    },
+    {
+        "command": "echo 8 > /proc/irq/171/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.509003"
+    },
+    {
+        "command": "echo 9 > /proc/irq/172/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.608113"
+    },
+    {
+        "command": "echo 10 > /proc/irq/173/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.705529"
+    },
+    {
+        "command": "echo 11 > /proc/irq/174/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.801209"
+    },
+    {
+        "command": "echo 12 > /proc/irq/175/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.897819"
+    },
+    {
+        "command": "echo 13 > /proc/irq/176/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:41.996616"
+    },
+    {
+        "command": "echo 14 > /proc/irq/177/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.094520"
+    },
+    {
+        "command": "echo 15 > /proc/irq/178/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.193396"
+    },
+    {
+        "command": "echo 16 > /proc/irq/179/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.291106"
+    },
+    {
+        "command": "echo 17 > /proc/irq/180/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.389953"
+    },
+    {
+        "command": "echo 18 > /proc/irq/181/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.488668"
+    },
+    {
+        "command": "echo 19 > /proc/irq/182/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.585340"
+    },
+    {
+        "command": "echo 20 > /proc/irq/183/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.683078"
+    },
+    {
+        "command": "echo 21 > /proc/irq/184/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.784449"
+    },
+    {
+        "command": "echo 22 > /proc/irq/185/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.881576"
+    },
+    {
+        "command": "echo 23 > /proc/irq/186/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:42.978936"
+    },
+    {
+        "command": "echo 24 > /proc/irq/187/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.076948"
+    },
+    {
+        "command": "echo 25 > /proc/irq/188/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.176153"
+    },
+    {
+        "command": "echo 26 > /proc/irq/189/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.274338"
+    },
+    {
+        "command": "echo 27 > /proc/irq/190/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.374416"
+    },
+    {
+        "command": "echo 28 > /proc/irq/191/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.473611"
+    },
+    {
+        "command": "echo 29 > /proc/irq/192/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.573417"
+    },
+    {
+        "command": "echo 30 > /proc/irq/193/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.673897"
+    },
+    {
+        "command": "echo 31 > /proc/irq/194/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.772709"
+    },
+    {
+        "command": "echo 32 > /proc/irq/195/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.869733"
+    },
+    {
+        "command": "echo 33 > /proc/irq/196/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:43.969178"
+    },
+    {
+        "command": "echo 34 > /proc/irq/197/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.069914"
+    },
+    {
+        "command": "echo 35 > /proc/irq/198/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.170945"
+    },
+    {
+        "command": "echo 36 > /proc/irq/199/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.272023"
+    },
+    {
+        "command": "echo 37 > /proc/irq/200/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.370209"
+    },
+    {
+        "command": "echo 38 > /proc/irq/201/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.471233"
+    },
+    {
+        "command": "echo 39 > /proc/irq/202/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.571639"
+    },
+    {
+        "command": "echo 40 > /proc/irq/203/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.673409"
+    },
+    {
+        "command": "echo 41 > /proc/irq/204/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.770517"
+    },
+    {
+        "command": "echo 42 > /proc/irq/205/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.871637"
+    },
+    {
+        "command": "echo 43 > /proc/irq/206/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:44.972510"
+    },
+    {
+        "command": "echo 44 > /proc/irq/207/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:45.073345"
+    },
+    {
+        "command": "echo 45 > /proc/irq/208/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:45.173952"
+    },
+    {
+        "command": "echo 46 > /proc/irq/209/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:45.272179"
+    },
+    {
+        "command": "echo 47 > /proc/irq/210/smp_affinity_list",
+        "dir": "wrk",
+        "time": "07:25:45.371836"
+    },
+    {
+        "command": "ethtool -G ens1f0 rx 2048",
+        "dir": "wrk",
+        "time": "07:25:45.473713"
+    },
+    {
+        "command": "ethtool -G ens1f0 tx 2048",
+        "dir": "wrk",
+        "time": "07:25:45.576332"
+    },
+    {
+        "command": "ethtool -K ens1f0 tso off",
+        "dir": "wrk",
+        "time": "07:25:45.681158"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "07:25:46.209153"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "07:25:53.331462"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "07:26:00.443532"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "07:26:06.614822"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "07:26:13.728185"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "wrk",
+        "time": "07:26:20.842076"
+    },
+    {
+        "command": "! test -e /tmp/screen_02Feb24_07_26_21_139843311096496.log",
+        "dir": "wrk",
+        "time": "07:26:21.565758"
+    },
+    {
+        "command": "screen -dmS 02Feb24_07_26_21_139843311096496 -L -Logfile /tmp/screen_02Feb24_07_26_21_139843311096496.log sh -c \"mpstat -P ALL 2\"",
+        "dir": "wrk",
+        "time": "07:26:21.662825"
+    },
+    {
+        "command": "screen -S 02Feb24_07_26_21_139843311096496 -X logfile flush 0",
+        "dir": "wrk",
+        "time": "07:26:21.764434"
+    },
+    {
+        "command": "nstat -rn",
+        "dir": "wrk",
+        "time": "07:26:21.864282"
+    },
+    {
+        "command": "! test -e /tmp/screen_02Feb24_07_26_21_139843311700384.log",
+        "dir": "wrk",
+        "time": "07:26:21.964003"
+    },
+    {
+        "command": "screen -dmS 02Feb24_07_26_21_139843311700384 -L -Logfile /tmp/screen_02Feb24_07_26_21_139843311700384.log sh -c \"ulimit -n 1048576;  ./wrk --latency -d 8 -c 4800 -t 48 http://192.168.11.154:80/; sleep 3\"",
+        "dir": "wrk",
+        "time": "07:26:22.061173"
+    },
+    {
+        "command": "screen -S 02Feb24_07_26_21_139843311700384 -X logfile flush 0",
+        "dir": "wrk",
+        "time": "07:26:22.162152"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:22.263021"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:23.366450"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:24.469294"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:25.571888"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:26.676689"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:27.776149"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:28.875004"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:29.980494"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:31.083721"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:32.184771"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:33.286096"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:34.386051"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:34.485777"
+    },
+    {
+        "command": "test -e /tmp/screen_02Feb24_07_26_21_139843311700384.log",
+        "dir": "wrk",
+        "time": "07:26:34.588235"
+    },
+    {
+        "command": "cat /tmp/screen_02Feb24_07_26_21_139843311700384.log",
+        "dir": "wrk",
+        "time": "07:26:34.684975"
+    },
+    {
+        "command": "rm /tmp/screen_02Feb24_07_26_21_139843311700384.log",
+        "dir": "wrk",
+        "time": "07:26:34.785060"
+    },
+    {
+        "command": "screen -ls | grep 02Feb24_07_26_21_139843311096496 | cut -d. -f1",
+        "dir": "wrk",
+        "time": "07:26:37.870073"
+    },
+    {
+        "command": "ps h --ppid 71365 -o pid",
+        "dir": "wrk",
+        "time": "07:26:38.009969"
+    },
+    {
+        "command": "screen -S 02Feb24_07_26_21_139843311096496 -X stuff $'\\003'",
+        "dir": "wrk",
+        "time": "07:26:38.127328"
+    },
+    {
+        "command": "kill -0 71366 2>/dev/null",
+        "dir": "wrk",
+        "time": "07:26:38.228973"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "wrk",
+        "time": "07:26:38.329420"
+    },
+    {
+        "command": "test -e /tmp/screen_02Feb24_07_26_21_139843311096496.log",
+        "dir": "wrk",
+        "time": "07:26:38.429890"
+    },
+    {
+        "command": "cat /tmp/screen_02Feb24_07_26_21_139843311096496.log",
+        "dir": "wrk",
+        "time": "07:26:38.528317"
+    },
+    {
+        "command": "rm /tmp/screen_02Feb24_07_26_21_139843311096496.log",
+        "dir": "wrk",
+        "time": "07:26:38.660934"
+    },
+    {
+        "command": "nstat -z 'Tcp*'",
+        "dir": "wrk",
+        "time": "07:26:38.761548"
+    },
+    {
+        "command": "ss --info --tcp '( sport = :http or dport = :http )'",
+        "dir": "wrk",
+        "time": "07:26:38.863715"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "wrk",
+        "time": "07:26:38.970971"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/cpuidle/state1/disable",
+        "dir": "wrk",
+        "time": "07:26:39.070068"
+    }
+]

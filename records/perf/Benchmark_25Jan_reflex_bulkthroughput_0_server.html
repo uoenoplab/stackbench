@@ -1,0 +1,4249 @@
+
+<html>
+  <head>
+    <title>Perf FlameGraph</title>
+    <style>
+    .container {
+      margin: 0;
+      margin-right:25px;
+      padding:0;
+      overflow:hidden;
+    }
+    iframe {
+      margin:0;
+      padding:0;
+      border:0;
+    }
+    </style>
+  </head>
+<body>
+<h3>CPU 0</h3>
+<div style="display:flex;"><div><p>0-2</p>
+<div class="container" style="padding-top: 0px;"><iframe width=1200 height=364 srcdoc="<html><head></head><body style=&quot;margin: 0; font-size: 0px; letter-spacing: 0px; word-spacing: 0px;&quot;>
+
+<svg version=&quot;1.1&quot; width=&quot;1200&quot; height=&quot;358&quot; onload=&quot;init(evt)&quot; viewBox=&quot;0 0 1200 358&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;>
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id=&quot;background&quot; y1=&quot;0&quot; y2=&quot;1&quot; x1=&quot;0&quot; x2=&quot;0&quot; >
+		<stop stop-color=&quot;#eeeeee&quot; offset=&quot;5%&quot; />
+		<stop stop-color=&quot;#eeeeb0&quot; offset=&quot;95%&quot; />
+	</linearGradient>
+</defs>
+<style type=&quot;text/css&quot;>
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type=&quot;text/ecmascript&quot;>
+<![CDATA[
+	&quot;use strict&quot;;
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById(&quot;details&quot;).firstChild;
+		searchbtn = document.getElementById(&quot;search&quot;);
+		ignorecaseBtn = document.getElementById(&quot;ignorecase&quot;);
+		unzoombtn = document.getElementById(&quot;unzoom&quot;);
+		matchedtxt = document.getElementById(&quot;matched&quot;);
+		svg = document.getElementsByTagName(&quot;svg&quot;)[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x=&quot;' + params.x + '&quot;][y=&quot;' + params.y + '&quot;]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener(&quot;click&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == &quot;a&quot;) {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains(&quot;parent&quot;)) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add(&quot;hide&quot;);
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector(&quot;rect&quot;);
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == &quot;unzoom&quot;) clearzoom();
+		else if (e.target.id == &quot;search&quot;) search_prompt();
+		else if (e.target.id == &quot;ignorecase&quot;) toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener(&quot;mouseover&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = &quot;Function: &quot; + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener(&quot;mouseout&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener(&quot;keydown&quot;,function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split(&quot;=&quot;);
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = &quot;?&quot;;
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == &quot;&&quot;)
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == &quot;frames&quot;) return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes[&quot;_orig_&quot; + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute(&quot;_orig_&quot; + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes[&quot;_orig_&quot;+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes[&quot;_orig_&quot; + attr].value;
+		e.removeAttribute(&quot;_orig_&quot;+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, &quot;title&quot;).firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, &quot;rect&quot;);
+		var t = find_child(e, &quot;text&quot;);
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, &quot;title&quot;).textContent.replace(/\([^(]*\)$/,&quot;&quot;);
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = &quot;&quot;;
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + &quot;..&quot;;
+				return;
+			}
+		}
+		t.textContent = &quot;&quot;;
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, &quot;x&quot;);
+			orig_load(e, &quot;width&quot;);
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == &quot;text&quot;)
+					e.attributes.x.value = find_child(e.parentNode, &quot;rect[x]&quot;).attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, &quot;rect&quot;).attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove(&quot;hide&quot;);
+
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, &quot;rect&quot;).attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add(&quot;parent&quot;);
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add(&quot;hide&quot;);
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add(&quot;hide&quot;);
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add(&quot;hide&quot;);
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove(&quot;parent&quot;);
+			el[i].classList.remove(&quot;hide&quot;);
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add(&quot;show&quot;);
+		} else {
+			ignorecaseBtn.classList.remove(&quot;show&quot;);
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll(&quot;#frames rect&quot;);
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], &quot;fill&quot;)
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt(&quot;Enter a search term (regexp &quot; +
+			    &quot;allowed, eg: ^ext4_)&quot;
+			    + (ignorecase ? &quot;, ignoring case&quot; : &quot;&quot;)
+			    + &quot;\nPress Ctrl-i to toggle case sensitivity&quot;, &quot;&quot;);
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove(&quot;show&quot;);
+			searchbtn.firstChild.nodeValue = &quot;Search&quot;
+			matchedtxt.classList.add(&quot;hide&quot;);
+			matchedtxt.firstChild.nodeValue = &quot;&quot;
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById(&quot;frames&quot;).children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, &quot;rect&quot;);
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, &quot;fill&quot;);
+				rect.attributes.fill.value = &quot;rgb(230,0,230)&quot;;
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add(&quot;show&quot;);
+		searchbtn.firstChild.nodeValue = &quot;Reset Search&quot;;
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove(&quot;hide&quot;);
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = &quot;Matched: &quot; + pct + &quot;%&quot;;
+	}
+]]>
+</script>
+<rect x=&quot;0.0&quot; y=&quot;0&quot; width=&quot;1200.0&quot; height=&quot;358.0&quot; fill=&quot;url(#background)&quot;  />
+<text id=&quot;title&quot; x=&quot;600.00&quot; y=&quot;24&quot; >Flame Graph</text>
+<text id=&quot;details&quot; x=&quot;10.00&quot; y=&quot;341&quot; > </text>
+<text id=&quot;unzoom&quot; x=&quot;10.00&quot; y=&quot;24&quot; class=&quot;hide&quot;>Reset Zoom</text>
+<text id=&quot;search&quot; x=&quot;1090.00&quot; y=&quot;24&quot; >Search</text>
+<text id=&quot;ignorecase&quot; x=&quot;1174.00&quot; y=&quot;24&quot; >ic</text>
+<text id=&quot;matched&quot; x=&quot;1090.00&quot; y=&quot;341&quot; > </text>
+<g id=&quot;frames&quot;>
+<g >
+<title>__memcpy_avx_unaligned (455,920,088 samples, 5.36%)</title><rect x=&quot;637.9&quot; y=&quot;261&quot; width=&quot;63.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;640.93&quot; y=&quot;271.5&quot; >__memc..</text>
+</g>
+<g >
+<title>cpu_do_bookkeeping (37,993,174 samples, 0.45%)</title><rect x=&quot;20.5&quot; y=&quot;277&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(192,192,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;23.53&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_send (151,973,790 samples, 1.79%)</title><rect x=&quot;380.7&quot; y=&quot;277&quot; width=&quot;21.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(179,179,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;383.68&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>timer_now (823,521,746 samples, 9.68%)</title><rect x=&quot;860.9&quot; y=&quot;277&quot; width=&quot;114.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(183,183,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;863.87&quot; y=&quot;287.5&quot; >timer_now</text>
+</g>
+<g >
+<title>nophttpd-?/9587 (8,492,769,053 samples, 99.78%)</title><rect x=&quot;10.0&quot; y=&quot;293&quot; width=&quot;1177.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(175,175,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;303.5&quot; >nophttpd-?/9587</text>
+</g>
+<g >
+<title>timer_run (1,531,907,983 samples, 18.00%)</title><rect x=&quot;975.0&quot; y=&quot;277&quot; width=&quot;212.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,221,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;978.04&quot; y=&quot;287.5&quot; >timer_run</text>
+</g>
+<g >
+<title>generic_perform_write (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;149&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(220,80,80)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;159.5&quot; ></text>
+</g>
+<g >
+<title>ip_send_one (37,993,090 samples, 0.45%)</title><rect x=&quot;401.7&quot; y=&quot;277&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;404.75&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>ix_handle_events (75,985,645 samples, 0.89%)</title><rect x=&quot;748.5&quot; y=&quot;261&quot; width=&quot;10.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(206,206,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;751.55&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>tcp_seg_free (37,993,054 samples, 0.45%)</title><rect x=&quot;828.9&quot; y=&quot;277&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(211,211,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;831.89&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (75,989,589 samples, 0.89%)</title><rect x=&quot;738.0&quot; y=&quot;245&quot; width=&quot;10.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;741.01&quot; y=&quot;255.5&quot; ></text>
+</g>
+<g >
+<title>ixev_send (303,949,371 samples, 3.57%)</title><rect x=&quot;706.4&quot; y=&quot;261&quot; width=&quot;42.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(184,184,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;709.41&quot; y=&quot;271.5&quot; >ixe..</text>
+</g>
+<g >
+<title>spdk_nvme_qpair_process_completions (296,801,386 samples, 3.49%)</title><rect x=&quot;433.5&quot; y=&quot;261&quot; width=&quot;41.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,221,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;436.47&quot; y=&quot;271.5&quot; >spd..</text>
+</g>
+<g >
+<title>pbuf_cat (76,085,977 samples, 0.89%)</title><rect x=&quot;622.1&quot; y=&quot;277&quot; width=&quot;10.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(200,200,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;625.12&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>nvme_pcie_qpair_process_completions (189,965,574 samples, 2.23%)</title><rect x=&quot;438.7&quot; y=&quot;245&quot; width=&quot;26.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(216,216,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;441.74&quot; y=&quot;255.5&quot; >n..</text>
+</g>
+<g >
+<title>all (8,511,355,411 samples, 100%)</title><rect x=&quot;10.0&quot; y=&quot;309&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,218,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;319.5&quot; ></text>
+</g>
+<g >
+<title>vfs_write (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;213&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(225,86,86)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;223.5&quot; ></text>
+</g>
+<g >
+<title>i40e_recv_scattered_pkts (645,883,784 samples, 7.59%)</title><rect x=&quot;291.1&quot; y=&quot;261&quot; width=&quot;89.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;294.13&quot; y=&quot;271.5&quot; >i40e_recv_..</text>
+</g>
+<g >
+<title>__do_page_fault (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;85&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(232,97,97)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>do_page_fault (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;101&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(249,121,121)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;111.5&quot; ></text>
+</g>
+<g >
+<title>__handle_mm_fault (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;53&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(231,95,95)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>__vfs_write (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;197&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(209,63,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;207.5&quot; ></text>
+</g>
+<g >
+<title>tcp_output_packet (313,534,091 samples, 3.68%)</title><rect x=&quot;785.4&quot; y=&quot;277&quot; width=&quot;43.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(227,227,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;788.42&quot; y=&quot;287.5&quot; >tcp_..</text>
+</g>
+<g >
+<title>nvme_process_completions (448,922,332 samples, 5.27%)</title><rect x=&quot;412.4&quot; y=&quot;277&quot; width=&quot;62.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(228,228,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;415.38&quot; y=&quot;287.5&quot; >nvme_p..</text>
+</g>
+<g >
+<title>page_fault (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;117&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(242,111,111)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;127.5&quot; ></text>
+</g>
+<g >
+<title>perf-?/9613 (18,586,358 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;293&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(202,202,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.42&quot; y=&quot;303.5&quot; ></text>
+</g>
+<g >
+<title>ixev_wait (75,986,744 samples, 0.89%)</title><rect x=&quot;759.1&quot; y=&quot;261&quot; width=&quot;10.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(197,197,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;762.08&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>writen (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;277&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(181,181,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_poll (2,483,723,653 samples, 29.18%)</title><rect x=&quot;36.3&quot; y=&quot;277&quot; width=&quot;344.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(197,197,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;39.34&quot; y=&quot;287.5&quot; >eth_process_poll</text>
+</g>
+<g >
+<title>tcp_output (37,993,992 samples, 0.45%)</title><rect x=&quot;780.2&quot; y=&quot;277&quot; width=&quot;5.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,218,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;783.16&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>memset@plt (37,992,227 samples, 0.45%)</title><rect x=&quot;10.0&quot; y=&quot;261&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>mem_free (38,727,230 samples, 0.46%)</title><rect x=&quot;407.0&quot; y=&quot;277&quot; width=&quot;5.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(202,202,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;410.01&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>[unknown] (37,992,227 samples, 0.45%)</title><rect x=&quot;10.0&quot; y=&quot;277&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(194,194,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>nvme_transport_qpair_process_completions (68,843,653 samples, 0.81%)</title><rect x=&quot;465.1&quot; y=&quot;245&quot; width=&quot;9.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(193,193,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;468.08&quot; y=&quot;255.5&quot; ></text>
+</g>
+<g >
+<title>pbuf_alloc (113,980,560 samples, 1.34%)</title><rect x=&quot;606.3&quot; y=&quot;277&quot; width=&quot;15.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(178,178,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;609.31&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>tcp_segs_free (37,993,154 samples, 0.45%)</title><rect x=&quot;834.2&quot; y=&quot;277&quot; width=&quot;5.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(194,194,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;837.16&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>eth_input_process (75,987,343 samples, 0.89%)</title><rect x=&quot;25.8&quot; y=&quot;277&quot; width=&quot;10.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(207,207,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;28.80&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (37,993,244 samples, 0.45%)</title><rect x=&quot;823.6&quot; y=&quot;261&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(215,215,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;826.63&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>tcp_write (154,670,704 samples, 1.82%)</title><rect x=&quot;839.4&quot; y=&quot;277&quot; width=&quot;21.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,203,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;842.43&quot; y=&quot;287.5&quot; >t..</text>
+</g>
+<g >
+<title>arp_lookup_mac (37,993,980 samples, 0.45%)</title><rect x=&quot;15.3&quot; y=&quot;277&quot; width=&quot;5.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(209,209,62)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;18.27&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>pp_main_handler (493,913,519 samples, 5.80%)</title><rect x=&quot;637.9&quot; y=&quot;277&quot; width=&quot;68.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(194,194,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;640.93&quot; y=&quot;287.5&quot; >pp_main..</text>
+</g>
+<g >
+<title>generic_file_write_iter (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;181&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,80,80)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;191.5&quot; ></text>
+</g>
+<g >
+<title>iov_iter_fault_in_readable (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;133&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(241,110,110)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;143.5&quot; ></text>
+</g>
+<g >
+<title>pp_stream_handler (303,949,371 samples, 3.57%)</title><rect x=&quot;706.4&quot; y=&quot;277&quot; width=&quot;42.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(185,185,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;709.41&quot; y=&quot;287.5&quot; >pp_..</text>
+</g>
+<g >
+<title>sys_bpoll (37,992,813 samples, 0.45%)</title><rect x=&quot;769.6&quot; y=&quot;277&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,218,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;772.62&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>tcp_input (38,043,882 samples, 0.45%)</title><rect x=&quot;774.9&quot; y=&quot;277&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(191,191,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;777.88&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>__generic_file_write_iter (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;165&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(223,83,83)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;175.5&quot; ></text>
+</g>
+<g >
+<title>__memset_avx2 (76,025,452 samples, 0.89%)</title><rect x=&quot;595.8&quot; y=&quot;261&quot; width=&quot;10.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(208,208,62)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;598.77&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>sys_write (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;229&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(207,61,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;239.5&quot; ></text>
+</g>
+<g >
+<title>ixev_send (37,993,431 samples, 0.45%)</title><rect x=&quot;701.1&quot; y=&quot;261&quot; width=&quot;5.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;704.14&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>reflex_setup_thread (151,972,389 samples, 1.79%)</title><rect x=&quot;748.5&quot; y=&quot;277&quot; width=&quot;21.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(226,226,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;751.55&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>i40e_xmit_pkts (113,981,506 samples, 1.34%)</title><rect x=&quot;385.9&quot; y=&quot;261&quot; width=&quot;15.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(200,200,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;388.94&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>__write_nocancel (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;261&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(210,210,62)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>__do_fault (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;37&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(213,69,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>pbuf_clen (37,993,053 samples, 0.45%)</title><rect x=&quot;632.7&quot; y=&quot;277&quot; width=&quot;5.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(211,211,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;635.66&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>handle_mm_fault (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;69&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(250,124,124)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>entry_SYSCALL_64_fastpath (18,541,667 samples, 0.22%)</title><rect x=&quot;1187.4&quot; y=&quot;245&quot; width=&quot;2.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(231,95,95)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1190.43&quot; y=&quot;255.5&quot; ></text>
+</g>
+<g >
+<title>nvme_sched (949,915,946 samples, 11.16%)</title><rect x=&quot;474.6&quot; y=&quot;277&quot; width=&quot;131.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(207,207,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;477.62&quot; y=&quot;287.5&quot; >nvme_sched</text>
+</g>
+</g>
+</svg>
+</body></html>"></iframe></div>
+</div><div><p>2-4</p>
+<div class="container" style="padding-top: 208px;"><iframe width=1200 height=156 srcdoc="<html><head></head><body style=&quot;margin: 0; font-size: 0px; letter-spacing: 0px; word-spacing: 0px;&quot;>
+
+<svg version=&quot;1.1&quot; width=&quot;1200&quot; height=&quot;150&quot; onload=&quot;init(evt)&quot; viewBox=&quot;0 0 1200 150&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;>
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id=&quot;background&quot; y1=&quot;0&quot; y2=&quot;1&quot; x1=&quot;0&quot; x2=&quot;0&quot; >
+		<stop stop-color=&quot;#eeeeee&quot; offset=&quot;5%&quot; />
+		<stop stop-color=&quot;#eeeeb0&quot; offset=&quot;95%&quot; />
+	</linearGradient>
+</defs>
+<style type=&quot;text/css&quot;>
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type=&quot;text/ecmascript&quot;>
+<![CDATA[
+	&quot;use strict&quot;;
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById(&quot;details&quot;).firstChild;
+		searchbtn = document.getElementById(&quot;search&quot;);
+		ignorecaseBtn = document.getElementById(&quot;ignorecase&quot;);
+		unzoombtn = document.getElementById(&quot;unzoom&quot;);
+		matchedtxt = document.getElementById(&quot;matched&quot;);
+		svg = document.getElementsByTagName(&quot;svg&quot;)[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x=&quot;' + params.x + '&quot;][y=&quot;' + params.y + '&quot;]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener(&quot;click&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == &quot;a&quot;) {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains(&quot;parent&quot;)) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add(&quot;hide&quot;);
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector(&quot;rect&quot;);
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == &quot;unzoom&quot;) clearzoom();
+		else if (e.target.id == &quot;search&quot;) search_prompt();
+		else if (e.target.id == &quot;ignorecase&quot;) toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener(&quot;mouseover&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = &quot;Function: &quot; + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener(&quot;mouseout&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener(&quot;keydown&quot;,function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split(&quot;=&quot;);
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = &quot;?&quot;;
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == &quot;&&quot;)
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == &quot;frames&quot;) return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes[&quot;_orig_&quot; + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute(&quot;_orig_&quot; + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes[&quot;_orig_&quot;+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes[&quot;_orig_&quot; + attr].value;
+		e.removeAttribute(&quot;_orig_&quot;+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, &quot;title&quot;).firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, &quot;rect&quot;);
+		var t = find_child(e, &quot;text&quot;);
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, &quot;title&quot;).textContent.replace(/\([^(]*\)$/,&quot;&quot;);
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = &quot;&quot;;
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + &quot;..&quot;;
+				return;
+			}
+		}
+		t.textContent = &quot;&quot;;
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, &quot;x&quot;);
+			orig_load(e, &quot;width&quot;);
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == &quot;text&quot;)
+					e.attributes.x.value = find_child(e.parentNode, &quot;rect[x]&quot;).attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, &quot;rect&quot;).attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove(&quot;hide&quot;);
+
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, &quot;rect&quot;).attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add(&quot;parent&quot;);
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add(&quot;hide&quot;);
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add(&quot;hide&quot;);
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add(&quot;hide&quot;);
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove(&quot;parent&quot;);
+			el[i].classList.remove(&quot;hide&quot;);
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add(&quot;show&quot;);
+		} else {
+			ignorecaseBtn.classList.remove(&quot;show&quot;);
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll(&quot;#frames rect&quot;);
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], &quot;fill&quot;)
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt(&quot;Enter a search term (regexp &quot; +
+			    &quot;allowed, eg: ^ext4_)&quot;
+			    + (ignorecase ? &quot;, ignoring case&quot; : &quot;&quot;)
+			    + &quot;\nPress Ctrl-i to toggle case sensitivity&quot;, &quot;&quot;);
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove(&quot;show&quot;);
+			searchbtn.firstChild.nodeValue = &quot;Search&quot;
+			matchedtxt.classList.add(&quot;hide&quot;);
+			matchedtxt.firstChild.nodeValue = &quot;&quot;
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById(&quot;frames&quot;).children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, &quot;rect&quot;);
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, &quot;fill&quot;);
+				rect.attributes.fill.value = &quot;rgb(230,0,230)&quot;;
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add(&quot;show&quot;);
+		searchbtn.firstChild.nodeValue = &quot;Reset Search&quot;;
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove(&quot;hide&quot;);
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = &quot;Matched: &quot; + pct + &quot;%&quot;;
+	}
+]]>
+</script>
+<rect x=&quot;0.0&quot; y=&quot;0&quot; width=&quot;1200.0&quot; height=&quot;150.0&quot; fill=&quot;url(#background)&quot;  />
+<text id=&quot;title&quot; x=&quot;600.00&quot; y=&quot;24&quot; >Flame Graph</text>
+<text id=&quot;details&quot; x=&quot;10.00&quot; y=&quot;133&quot; > </text>
+<text id=&quot;unzoom&quot; x=&quot;10.00&quot; y=&quot;24&quot; class=&quot;hide&quot;>Reset Zoom</text>
+<text id=&quot;search&quot; x=&quot;1090.00&quot; y=&quot;24&quot; >Search</text>
+<text id=&quot;ignorecase&quot; x=&quot;1174.00&quot; y=&quot;24&quot; >ic</text>
+<text id=&quot;matched&quot; x=&quot;1090.00&quot; y=&quot;133&quot; > </text>
+<g id=&quot;frames&quot;>
+<g >
+<title>pbuf_free (37,993,990 samples, 0.50%)</title><rect x=&quot;546.9&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,203,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;549.90&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>reflex_setup_thread (151,974,438 samples, 2.00%)</title><rect x=&quot;659.0&quot; y=&quot;69&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;662.00&quot; y=&quot;79.5&quot; >r..</text>
+</g>
+<g >
+<title>nvme_process_completions (645,887,879 samples, 8.50%)</title><rect x=&quot;234.2&quot; y=&quot;69&quot; width=&quot;100.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(214,214,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;237.20&quot; y=&quot;79.5&quot; >nvme_process..</text>
+</g>
+<g >
+<title>pp_main_handler (455,923,557 samples, 6.00%)</title><rect x=&quot;552.8&quot; y=&quot;69&quot; width=&quot;70.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(195,195,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;555.80&quot; y=&quot;79.5&quot; >pp_main_..</text>
+</g>
+<g >
+<title>nvme_sched (1,291,786,239 samples, 17.00%)</title><rect x=&quot;334.5&quot; y=&quot;69&quot; width=&quot;200.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(179,179,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;337.50&quot; y=&quot;79.5&quot; >nvme_sched</text>
+</g>
+<g >
+<title>timer_now (835,859,489 samples, 11.00%)</title><rect x=&quot;824.2&quot; y=&quot;69&quot; width=&quot;129.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(190,190,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;827.20&quot; y=&quot;79.5&quot; >timer_now</text>
+</g>
+<g >
+<title>mem_free (37,992,916 samples, 0.50%)</title><rect x=&quot;228.3&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(207,207,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;231.30&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_send (455,921,959 samples, 6.00%)</title><rect x=&quot;151.6&quot; y=&quot;69&quot; width=&quot;70.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(188,188,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;154.60&quot; y=&quot;79.5&quot; >eth_pro..</text>
+</g>
+<g >
+<title>nvme_transport_qpair_process_completions (75,987,516 samples, 1.00%)</title><rect x=&quot;322.7&quot; y=&quot;37&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(188,188,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;325.70&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>cpu_do_bookkeeping (37,993,914 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(219,219,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>pbuf_cat (37,993,311 samples, 0.50%)</title><rect x=&quot;541.0&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(205,205,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;544.00&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_poll (873,850,094 samples, 11.50%)</title><rect x=&quot;15.9&quot; y=&quot;69&quot; width=&quot;135.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(204,204,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;18.90&quot; y=&quot;79.5&quot; >eth_process_poll</text>
+</g>
+<g >
+<title>ixev_wait (151,974,438 samples, 2.00%)</title><rect x=&quot;659.0&quot; y=&quot;53&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(207,207,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;662.00&quot; y=&quot;63.5&quot; >i..</text>
+</g>
+<g >
+<title>nvme_pcie_qpair_process_completions (303,946,405 samples, 4.00%)</title><rect x=&quot;275.5&quot; y=&quot;37&quot; width=&quot;47.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(202,202,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;278.50&quot; y=&quot;47.5&quot; >nvme..</text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (75,986,420 samples, 1.00%)</title><rect x=&quot;647.2&quot; y=&quot;37&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(181,181,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;650.20&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>spdk_nvme_qpair_process_completions (607,893,990 samples, 8.00%)</title><rect x=&quot;240.1&quot; y=&quot;53&quot; width=&quot;94.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(196,196,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;243.10&quot; y=&quot;63.5&quot; >spdk_nvme_q..</text>
+</g>
+<g >
+<title>all (7,598,713,678 samples, 100%)</title><rect x=&quot;10.0&quot; y=&quot;101&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(213,213,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;111.5&quot; ></text>
+</g>
+<g >
+<title>tcp_input (37,993,886 samples, 0.50%)</title><rect x=&quot;747.5&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;750.50&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>ixev_send (227,962,464 samples, 3.00%)</title><rect x=&quot;623.6&quot; y=&quot;53&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(211,211,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;626.60&quot; y=&quot;63.5&quot; >ixe..</text>
+</g>
+<g >
+<title>sys_bpoll (417,928,450 samples, 5.50%)</title><rect x=&quot;682.6&quot; y=&quot;69&quot; width=&quot;64.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;685.60&quot; y=&quot;79.5&quot; >sys_bpoll</text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (151,973,974 samples, 2.00%)</title><rect x=&quot;794.7&quot; y=&quot;53&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(219,219,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;797.70&quot; y=&quot;63.5&quot; >_..</text>
+</g>
+<g >
+<title>tcp_output_packet (417,929,393 samples, 5.50%)</title><rect x=&quot;753.4&quot; y=&quot;69&quot; width=&quot;64.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(193,193,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;756.40&quot; y=&quot;79.5&quot; >tcp_out..</text>
+</g>
+<g >
+<title>inet_chksum_pseudo (37,993,076 samples, 0.50%)</title><rect x=&quot;222.4&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(181,181,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;225.40&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>timer_run (1,519,742,066 samples, 20.00%)</title><rect x=&quot;954.0&quot; y=&quot;69&quot; width=&quot;236.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(225,225,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;957.00&quot; y=&quot;79.5&quot; >timer_run</text>
+</g>
+<g >
+<title>ixev_send (113,980,331 samples, 1.50%)</title><rect x=&quot;605.9&quot; y=&quot;53&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,221,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;608.90&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>nophttpd-?/9587 (7,598,713,678 samples, 100.00%)</title><rect x=&quot;10.0&quot; y=&quot;85&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(183,183,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;95.5&quot; >nophttpd-?/9587</text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (341,943,226 samples, 4.50%)</title><rect x=&quot;552.8&quot; y=&quot;53&quot; width=&quot;53.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(180,180,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;555.80&quot; y=&quot;63.5&quot; >__mem..</text>
+</g>
+<g >
+<title>pp_stream_handler (227,962,464 samples, 3.00%)</title><rect x=&quot;623.6&quot; y=&quot;69&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(183,183,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;626.60&quot; y=&quot;79.5&quot; >pp_..</text>
+</g>
+<g >
+<title>i40e_recv_scattered_pkts (531,908,615 samples, 7.00%)</title><rect x=&quot;69.0&quot; y=&quot;53&quot; width=&quot;82.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(200,200,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;72.00&quot; y=&quot;63.5&quot; >i40e_recv..</text>
+</g>
+<g >
+<title>tcp_write (37,993,274 samples, 0.50%)</title><rect x=&quot;818.3&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(222,222,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;821.30&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>ix_poll (75,986,769 samples, 1.00%)</title><rect x=&quot;670.8&quot; y=&quot;37&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(192,192,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;673.80&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>pbuf_alloc (37,993,283 samples, 0.50%)</title><rect x=&quot;535.1&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(188,188,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;538.10&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>i40e_xmit_pkts (227,960,402 samples, 3.00%)</title><rect x=&quot;187.0&quot; y=&quot;53&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(212,212,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;190.00&quot; y=&quot;63.5&quot; >i4..</text>
+</g>
+</g>
+</svg>
+</body></html>"></iframe></div>
+</div><div><p>4-6</p>
+<div class="container" style="padding-top: 192px;"><iframe width=1200 height=172 srcdoc="<html><head></head><body style=&quot;margin: 0; font-size: 0px; letter-spacing: 0px; word-spacing: 0px;&quot;>
+
+<svg version=&quot;1.1&quot; width=&quot;1200&quot; height=&quot;166&quot; onload=&quot;init(evt)&quot; viewBox=&quot;0 0 1200 166&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;>
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id=&quot;background&quot; y1=&quot;0&quot; y2=&quot;1&quot; x1=&quot;0&quot; x2=&quot;0&quot; >
+		<stop stop-color=&quot;#eeeeee&quot; offset=&quot;5%&quot; />
+		<stop stop-color=&quot;#eeeeb0&quot; offset=&quot;95%&quot; />
+	</linearGradient>
+</defs>
+<style type=&quot;text/css&quot;>
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type=&quot;text/ecmascript&quot;>
+<![CDATA[
+	&quot;use strict&quot;;
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById(&quot;details&quot;).firstChild;
+		searchbtn = document.getElementById(&quot;search&quot;);
+		ignorecaseBtn = document.getElementById(&quot;ignorecase&quot;);
+		unzoombtn = document.getElementById(&quot;unzoom&quot;);
+		matchedtxt = document.getElementById(&quot;matched&quot;);
+		svg = document.getElementsByTagName(&quot;svg&quot;)[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x=&quot;' + params.x + '&quot;][y=&quot;' + params.y + '&quot;]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener(&quot;click&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == &quot;a&quot;) {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains(&quot;parent&quot;)) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add(&quot;hide&quot;);
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector(&quot;rect&quot;);
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == &quot;unzoom&quot;) clearzoom();
+		else if (e.target.id == &quot;search&quot;) search_prompt();
+		else if (e.target.id == &quot;ignorecase&quot;) toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener(&quot;mouseover&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = &quot;Function: &quot; + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener(&quot;mouseout&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener(&quot;keydown&quot;,function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split(&quot;=&quot;);
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = &quot;?&quot;;
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == &quot;&&quot;)
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == &quot;frames&quot;) return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes[&quot;_orig_&quot; + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute(&quot;_orig_&quot; + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes[&quot;_orig_&quot;+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes[&quot;_orig_&quot; + attr].value;
+		e.removeAttribute(&quot;_orig_&quot;+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, &quot;title&quot;).firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, &quot;rect&quot;);
+		var t = find_child(e, &quot;text&quot;);
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, &quot;title&quot;).textContent.replace(/\([^(]*\)$/,&quot;&quot;);
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = &quot;&quot;;
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + &quot;..&quot;;
+				return;
+			}
+		}
+		t.textContent = &quot;&quot;;
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, &quot;x&quot;);
+			orig_load(e, &quot;width&quot;);
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == &quot;text&quot;)
+					e.attributes.x.value = find_child(e.parentNode, &quot;rect[x]&quot;).attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, &quot;rect&quot;).attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove(&quot;hide&quot;);
+
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, &quot;rect&quot;).attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add(&quot;parent&quot;);
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add(&quot;hide&quot;);
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add(&quot;hide&quot;);
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add(&quot;hide&quot;);
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove(&quot;parent&quot;);
+			el[i].classList.remove(&quot;hide&quot;);
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add(&quot;show&quot;);
+		} else {
+			ignorecaseBtn.classList.remove(&quot;show&quot;);
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll(&quot;#frames rect&quot;);
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], &quot;fill&quot;)
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt(&quot;Enter a search term (regexp &quot; +
+			    &quot;allowed, eg: ^ext4_)&quot;
+			    + (ignorecase ? &quot;, ignoring case&quot; : &quot;&quot;)
+			    + &quot;\nPress Ctrl-i to toggle case sensitivity&quot;, &quot;&quot;);
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove(&quot;show&quot;);
+			searchbtn.firstChild.nodeValue = &quot;Search&quot;
+			matchedtxt.classList.add(&quot;hide&quot;);
+			matchedtxt.firstChild.nodeValue = &quot;&quot;
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById(&quot;frames&quot;).children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, &quot;rect&quot;);
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, &quot;fill&quot;);
+				rect.attributes.fill.value = &quot;rgb(230,0,230)&quot;;
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add(&quot;show&quot;);
+		searchbtn.firstChild.nodeValue = &quot;Reset Search&quot;;
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove(&quot;hide&quot;);
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = &quot;Matched: &quot; + pct + &quot;%&quot;;
+	}
+]]>
+</script>
+<rect x=&quot;0.0&quot; y=&quot;0&quot; width=&quot;1200.0&quot; height=&quot;166.0&quot; fill=&quot;url(#background)&quot;  />
+<text id=&quot;title&quot; x=&quot;600.00&quot; y=&quot;24&quot; >Flame Graph</text>
+<text id=&quot;details&quot; x=&quot;10.00&quot; y=&quot;149&quot; > </text>
+<text id=&quot;unzoom&quot; x=&quot;10.00&quot; y=&quot;24&quot; class=&quot;hide&quot;>Reset Zoom</text>
+<text id=&quot;search&quot; x=&quot;1090.00&quot; y=&quot;24&quot; >Search</text>
+<text id=&quot;ignorecase&quot; x=&quot;1174.00&quot; y=&quot;24&quot; >ic</text>
+<text id=&quot;matched&quot; x=&quot;1090.00&quot; y=&quot;149&quot; > </text>
+<g id=&quot;frames&quot;>
+<g >
+<title>ixev_tcp_sent (75,988,445 samples, 1.00%)</title><rect x=&quot;700.3&quot; y=&quot;53&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(208,208,62)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;703.30&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>tcp_output_packet (531,910,384 samples, 7.00%)</title><rect x=&quot;771.1&quot; y=&quot;85&quot; width=&quot;82.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(222,222,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;774.10&quot; y=&quot;95.5&quot; >tcp_outpu..</text>
+</g>
+<g >
+<title>nophttpd-?/9587 (7,598,715,358 samples, 100.00%)</title><rect x=&quot;10.0&quot; y=&quot;101&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(210,210,62)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;111.5&quot; >nophttpd-?/9587</text>
+</g>
+<g >
+<title>tcp_seg_free (37,994,449 samples, 0.50%)</title><rect x=&quot;853.7&quot; y=&quot;85&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(179,179,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;856.70&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_poll (1,139,805,205 samples, 15.00%)</title><rect x=&quot;57.2&quot; y=&quot;85&quot; width=&quot;177.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(223,223,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;60.20&quot; y=&quot;95.5&quot; >eth_process_poll</text>
+</g>
+<g >
+<title>i40e_xmit_pkts (113,981,713 samples, 1.50%)</title><rect x=&quot;251.9&quot; y=&quot;69&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(226,226,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;254.90&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>ix_poll (113,980,758 samples, 1.50%)</title><rect x=&quot;718.0&quot; y=&quot;53&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(192,192,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;721.00&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>pp_main_handler (417,930,045 samples, 5.50%)</title><rect x=&quot;582.3&quot; y=&quot;85&quot; width=&quot;64.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(196,196,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;585.30&quot; y=&quot;95.5&quot; >pp_main..</text>
+</g>
+<g >
+<title>arp_lookup (37,993,670 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(206,206,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (151,973,644 samples, 2.00%)</title><rect x=&quot;830.1&quot; y=&quot;69&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,218,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;833.10&quot; y=&quot;79.5&quot; >_..</text>
+</g>
+<g >
+<title>sys_bpoll (113,979,588 samples, 1.50%)</title><rect x=&quot;735.7&quot; y=&quot;85&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(184,184,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;738.70&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>pbuf_alloc (151,974,153 samples, 2.00%)</title><rect x=&quot;552.8&quot; y=&quot;85&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(207,207,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;555.80&quot; y=&quot;95.5&quot; >p..</text>
+</g>
+<g >
+<title>nvme_process_completions (607,895,201 samples, 8.00%)</title><rect x=&quot;281.4&quot; y=&quot;85&quot; width=&quot;94.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(206,206,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;284.40&quot; y=&quot;95.5&quot; >nvme_proces..</text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (151,974,075 samples, 2.00%)</title><rect x=&quot;670.8&quot; y=&quot;53&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(183,183,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;673.80&quot; y=&quot;63.5&quot; >_..</text>
+</g>
+<g >
+<title>eth_process_send (227,961,759 samples, 3.00%)</title><rect x=&quot;234.2&quot; y=&quot;85&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(193,193,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;237.20&quot; y=&quot;95.5&quot; >eth..</text>
+</g>
+<g >
+<title>pbuf_clen (37,994,380 samples, 0.50%)</title><rect x=&quot;576.4&quot; y=&quot;85&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(208,208,62)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;579.40&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>nvme_sched (1,139,809,014 samples, 15.00%)</title><rect x=&quot;375.8&quot; y=&quot;85&quot; width=&quot;177.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;378.80&quot; y=&quot;95.5&quot; >nvme_sched</text>
+</g>
+<g >
+<title>reflex_setup_thread (265,956,682 samples, 3.50%)</title><rect x=&quot;694.4&quot; y=&quot;85&quot; width=&quot;41.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(219,219,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;697.40&quot; y=&quot;95.5&quot; >ref..</text>
+</g>
+<g >
+<title>mem_free (37,994,084 samples, 0.50%)</title><rect x=&quot;275.5&quot; y=&quot;85&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(201,201,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;278.50&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>[unknown] (113,980,238 samples, 1.50%)</title><rect x=&quot;10.0&quot; y=&quot;85&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,221,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>timer_run (1,367,768,860 samples, 18.00%)</title><rect x=&quot;977.6&quot; y=&quot;85&quot; width=&quot;212.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(188,188,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;980.60&quot; y=&quot;95.5&quot; >timer_run</text>
+</g>
+<g >
+<title>nvme_pcie_qpair_process_completions (379,933,874 samples, 5.00%)</title><rect x=&quot;316.8&quot; y=&quot;53&quot; width=&quot;59.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(204,204,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;319.80&quot; y=&quot;63.5&quot; >nvme_p..</text>
+</g>
+<g >
+<title>cpu_do_bookkeeping (189,967,816 samples, 2.50%)</title><rect x=&quot;27.7&quot; y=&quot;85&quot; width=&quot;29.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(183,183,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;30.70&quot; y=&quot;95.5&quot; >cp..</text>
+</g>
+<g >
+<title>ixev_buf_release (37,994,256 samples, 0.50%)</title><rect x=&quot;706.2&quot; y=&quot;37&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;709.20&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>tcp_output (113,982,368 samples, 1.50%)</title><rect x=&quot;753.4&quot; y=&quot;85&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(175,175,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;756.40&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (417,930,045 samples, 5.50%)</title><rect x=&quot;582.3&quot; y=&quot;69&quot; width=&quot;64.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(192,192,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;585.30&quot; y=&quot;79.5&quot; >__memcp..</text>
+</g>
+<g >
+<title>pp_stream_handler (303,947,917 samples, 4.00%)</title><rect x=&quot;647.2&quot; y=&quot;85&quot; width=&quot;47.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(220,220,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;650.20&quot; y=&quot;95.5&quot; >pp_s..</text>
+</g>
+<g >
+<title>__memset_avx2 (75,988,349 samples, 1.00%)</title><rect x=&quot;541.0&quot; y=&quot;69&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(205,205,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;544.00&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>i40e_recv_scattered_pkts (721,878,004 samples, 9.50%)</title><rect x=&quot;122.1&quot; y=&quot;69&quot; width=&quot;112.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(198,198,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;125.10&quot; y=&quot;79.5&quot; >i40e_recv_sca..</text>
+</g>
+<g >
+<title>ixev_send (303,947,917 samples, 4.00%)</title><rect x=&quot;647.2&quot; y=&quot;69&quot; width=&quot;47.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;650.20&quot; y=&quot;79.5&quot; >ixev..</text>
+</g>
+<g >
+<title>tcp_write (37,993,686 samples, 0.50%)</title><rect x=&quot;859.6&quot; y=&quot;85&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(190,190,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;862.60&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>ix_handle_events (113,982,397 samples, 1.50%)</title><rect x=&quot;694.4&quot; y=&quot;69&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(192,192,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;697.40&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>timer_now (721,875,715 samples, 9.50%)</title><rect x=&quot;865.5&quot; y=&quot;85&quot; width=&quot;112.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(196,196,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;868.50&quot; y=&quot;95.5&quot; >timer_now</text>
+</g>
+<g >
+<title>ixev_wait (151,974,285 samples, 2.00%)</title><rect x=&quot;712.1&quot; y=&quot;69&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(186,186,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;715.10&quot; y=&quot;79.5&quot; >i..</text>
+</g>
+<g >
+<title>memset@plt (75,986,568 samples, 1.00%)</title><rect x=&quot;15.9&quot; y=&quot;69&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(228,228,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;18.90&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>lwip_tcp_event (37,993,814 samples, 0.50%)</title><rect x=&quot;269.6&quot; y=&quot;85&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(180,180,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;272.60&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>all (7,598,715,358 samples, 100%)</title><rect x=&quot;10.0&quot; y=&quot;117&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(197,197,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;127.5&quot; ></text>
+</g>
+<g >
+<title>spdk_nvme_qpair_process_completions (455,921,736 samples, 6.00%)</title><rect x=&quot;305.0&quot; y=&quot;69&quot; width=&quot;70.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(198,198,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;308.00&quot; y=&quot;79.5&quot; >spdk_nv..</text>
+</g>
+</g>
+</svg>
+</body></html>"></iframe></div>
+</div><div><p>6-8</p>
+<div class="container" style="padding-top: 208px;"><iframe width=1200 height=156 srcdoc="<html><head></head><body style=&quot;margin: 0; font-size: 0px; letter-spacing: 0px; word-spacing: 0px;&quot;>
+
+<svg version=&quot;1.1&quot; width=&quot;1200&quot; height=&quot;150&quot; onload=&quot;init(evt)&quot; viewBox=&quot;0 0 1200 150&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;>
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id=&quot;background&quot; y1=&quot;0&quot; y2=&quot;1&quot; x1=&quot;0&quot; x2=&quot;0&quot; >
+		<stop stop-color=&quot;#eeeeee&quot; offset=&quot;5%&quot; />
+		<stop stop-color=&quot;#eeeeb0&quot; offset=&quot;95%&quot; />
+	</linearGradient>
+</defs>
+<style type=&quot;text/css&quot;>
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type=&quot;text/ecmascript&quot;>
+<![CDATA[
+	&quot;use strict&quot;;
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById(&quot;details&quot;).firstChild;
+		searchbtn = document.getElementById(&quot;search&quot;);
+		ignorecaseBtn = document.getElementById(&quot;ignorecase&quot;);
+		unzoombtn = document.getElementById(&quot;unzoom&quot;);
+		matchedtxt = document.getElementById(&quot;matched&quot;);
+		svg = document.getElementsByTagName(&quot;svg&quot;)[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x=&quot;' + params.x + '&quot;][y=&quot;' + params.y + '&quot;]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener(&quot;click&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == &quot;a&quot;) {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains(&quot;parent&quot;)) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add(&quot;hide&quot;);
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector(&quot;rect&quot;);
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == &quot;unzoom&quot;) clearzoom();
+		else if (e.target.id == &quot;search&quot;) search_prompt();
+		else if (e.target.id == &quot;ignorecase&quot;) toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener(&quot;mouseover&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = &quot;Function: &quot; + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener(&quot;mouseout&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener(&quot;keydown&quot;,function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split(&quot;=&quot;);
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = &quot;?&quot;;
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == &quot;&&quot;)
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == &quot;frames&quot;) return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes[&quot;_orig_&quot; + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute(&quot;_orig_&quot; + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes[&quot;_orig_&quot;+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes[&quot;_orig_&quot; + attr].value;
+		e.removeAttribute(&quot;_orig_&quot;+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, &quot;title&quot;).firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, &quot;rect&quot;);
+		var t = find_child(e, &quot;text&quot;);
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, &quot;title&quot;).textContent.replace(/\([^(]*\)$/,&quot;&quot;);
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = &quot;&quot;;
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + &quot;..&quot;;
+				return;
+			}
+		}
+		t.textContent = &quot;&quot;;
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, &quot;x&quot;);
+			orig_load(e, &quot;width&quot;);
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == &quot;text&quot;)
+					e.attributes.x.value = find_child(e.parentNode, &quot;rect[x]&quot;).attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, &quot;rect&quot;).attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove(&quot;hide&quot;);
+
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, &quot;rect&quot;).attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add(&quot;parent&quot;);
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add(&quot;hide&quot;);
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add(&quot;hide&quot;);
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add(&quot;hide&quot;);
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove(&quot;parent&quot;);
+			el[i].classList.remove(&quot;hide&quot;);
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add(&quot;show&quot;);
+		} else {
+			ignorecaseBtn.classList.remove(&quot;show&quot;);
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll(&quot;#frames rect&quot;);
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], &quot;fill&quot;)
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt(&quot;Enter a search term (regexp &quot; +
+			    &quot;allowed, eg: ^ext4_)&quot;
+			    + (ignorecase ? &quot;, ignoring case&quot; : &quot;&quot;)
+			    + &quot;\nPress Ctrl-i to toggle case sensitivity&quot;, &quot;&quot;);
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove(&quot;show&quot;);
+			searchbtn.firstChild.nodeValue = &quot;Search&quot;
+			matchedtxt.classList.add(&quot;hide&quot;);
+			matchedtxt.firstChild.nodeValue = &quot;&quot;
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById(&quot;frames&quot;).children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, &quot;rect&quot;);
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, &quot;fill&quot;);
+				rect.attributes.fill.value = &quot;rgb(230,0,230)&quot;;
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add(&quot;show&quot;);
+		searchbtn.firstChild.nodeValue = &quot;Reset Search&quot;;
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove(&quot;hide&quot;);
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = &quot;Matched: &quot; + pct + &quot;%&quot;;
+	}
+]]>
+</script>
+<rect x=&quot;0.0&quot; y=&quot;0&quot; width=&quot;1200.0&quot; height=&quot;150.0&quot; fill=&quot;url(#background)&quot;  />
+<text id=&quot;title&quot; x=&quot;600.00&quot; y=&quot;24&quot; >Flame Graph</text>
+<text id=&quot;details&quot; x=&quot;10.00&quot; y=&quot;133&quot; > </text>
+<text id=&quot;unzoom&quot; x=&quot;10.00&quot; y=&quot;24&quot; class=&quot;hide&quot;>Reset Zoom</text>
+<text id=&quot;search&quot; x=&quot;1090.00&quot; y=&quot;24&quot; >Search</text>
+<text id=&quot;ignorecase&quot; x=&quot;1174.00&quot; y=&quot;24&quot; >ic</text>
+<text id=&quot;matched&quot; x=&quot;1090.00&quot; y=&quot;133&quot; > </text>
+<g id=&quot;frames&quot;>
+<g >
+<title>ix_poll (227,961,033 samples, 3.00%)</title><rect x=&quot;700.3&quot; y=&quot;37&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;703.30&quot; y=&quot;47.5&quot; >ix..</text>
+</g>
+<g >
+<title>spdk_nvme_qpair_process_completions (531,910,860 samples, 7.00%)</title><rect x=&quot;346.3&quot; y=&quot;53&quot; width=&quot;82.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(196,196,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;349.30&quot; y=&quot;63.5&quot; >spdk_nvme..</text>
+</g>
+<g >
+<title>cpu_do_bookkeeping (75,988,008 samples, 1.00%)</title><rect x=&quot;21.8&quot; y=&quot;69&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(192,192,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;24.80&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>ixev_tcp_sent (37,994,075 samples, 0.50%)</title><rect x=&quot;676.7&quot; y=&quot;37&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;679.70&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>all (7,598,710,126 samples, 100%)</title><rect x=&quot;10.0&quot; y=&quot;101&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(182,182,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;111.5&quot; ></text>
+</g>
+<g >
+<title>i40e_recv_scattered_pkts (949,834,780 samples, 12.50%)</title><rect x=&quot;98.5&quot; y=&quot;53&quot; width=&quot;147.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(180,180,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;101.50&quot; y=&quot;63.5&quot; >i40e_recv_scattere..</text>
+</g>
+<g >
+<title>tcp_write (75,986,306 samples, 1.00%)</title><rect x=&quot;830.1&quot; y=&quot;69&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(187,187,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;833.10&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>pp_stream_handler (227,961,048 samples, 3.00%)</title><rect x=&quot;641.3&quot; y=&quot;69&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(191,191,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;644.30&quot; y=&quot;79.5&quot; >pp..</text>
+</g>
+<g >
+<title>nvme_transport_qpair_process_completions (113,980,454 samples, 1.50%)</title><rect x=&quot;411.2&quot; y=&quot;37&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(222,222,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;414.20&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>ixev_wait (341,941,057 samples, 4.50%)</title><rect x=&quot;682.6&quot; y=&quot;53&quot; width=&quot;53.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(223,223,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;685.60&quot; y=&quot;63.5&quot; >ixev_..</text>
+</g>
+<g >
+<title>[unknown] (37,994,112 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(215,215,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>memset@plt (37,994,112 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,221,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_send (417,930,136 samples, 5.50%)</title><rect x=&quot;246.0&quot; y=&quot;69&quot; width=&quot;64.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(219,219,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;249.00&quot; y=&quot;79.5&quot; >eth_pro..</text>
+</g>
+<g >
+<title>timer_now (797,863,807 samples, 10.50%)</title><rect x=&quot;841.9&quot; y=&quot;69&quot; width=&quot;123.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(204,204,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;844.90&quot; y=&quot;79.5&quot; >timer_now</text>
+</g>
+<g >
+<title>nvme_sched (683,883,701 samples, 9.00%)</title><rect x=&quot;428.9&quot; y=&quot;69&quot; width=&quot;106.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(179,179,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;431.90&quot; y=&quot;79.5&quot; >nvme_sched</text>
+</g>
+<g >
+<title>i40e_xmit_pkts (189,968,210 samples, 2.50%)</title><rect x=&quot;281.4&quot; y=&quot;53&quot; width=&quot;29.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(179,179,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;284.40&quot; y=&quot;63.5&quot; >i4..</text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (531,909,970 samples, 7.00%)</title><rect x=&quot;552.8&quot; y=&quot;53&quot; width=&quot;82.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(224,224,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;555.80&quot; y=&quot;63.5&quot; >__memcpy_..</text>
+</g>
+<g >
+<title>pbuf_cat (37,993,590 samples, 0.50%)</title><rect x=&quot;546.9&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;549.90&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>tcp_output_packet (189,965,276 samples, 2.50%)</title><rect x=&quot;794.7&quot; y=&quot;69&quot; width=&quot;29.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(223,223,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;797.70&quot; y=&quot;79.5&quot; >tc..</text>
+</g>
+<g >
+<title>pbuf_alloc (75,987,450 samples, 1.00%)</title><rect x=&quot;535.1&quot; y=&quot;69&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(225,225,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;538.10&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>eth_input_process (37,993,585 samples, 0.50%)</title><rect x=&quot;33.6&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;36.60&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>pp_main_handler (569,903,592 samples, 7.50%)</title><rect x=&quot;552.8&quot; y=&quot;69&quot; width=&quot;88.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(224,224,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;555.80&quot; y=&quot;79.5&quot; >pp_main_ha..</text>
+</g>
+<g >
+<title>nophttpd-?/9587 (7,598,710,126 samples, 100.00%)</title><rect x=&quot;10.0&quot; y=&quot;85&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(209,209,62)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;95.5&quot; >nophttpd-?/9587</text>
+</g>
+<g >
+<title>nvme_process_completions (683,885,469 samples, 9.00%)</title><rect x=&quot;322.7&quot; y=&quot;69&quot; width=&quot;106.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(200,200,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;325.70&quot; y=&quot;79.5&quot; >nvme_process_..</text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (113,980,640 samples, 1.50%)</title><rect x=&quot;659.0&quot; y=&quot;37&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;662.00&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>mem_free (37,994,355 samples, 0.50%)</title><rect x=&quot;316.8&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(187,187,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;319.80&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>reflex_setup_thread (379,935,132 samples, 5.00%)</title><rect x=&quot;676.7&quot; y=&quot;69&quot; width=&quot;59.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(186,186,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;679.70&quot; y=&quot;79.5&quot; >reflex..</text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (37,992,096 samples, 0.50%)</title><rect x=&quot;818.3&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(202,202,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;821.30&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>ixev_send (227,961,048 samples, 3.00%)</title><rect x=&quot;641.3&quot; y=&quot;53&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(186,186,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;644.30&quot; y=&quot;63.5&quot; >ix..</text>
+</g>
+<g >
+<title>bsys_tcp_sendv (37,994,206 samples, 0.50%)</title><rect x=&quot;15.9&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(185,185,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;18.90&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>tcp_seg_free (37,993,356 samples, 0.50%)</title><rect x=&quot;824.2&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;827.20&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>ixev_send (37,993,622 samples, 0.50%)</title><rect x=&quot;635.4&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(215,215,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;638.40&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>sys_bpoll (37,992,999 samples, 0.50%)</title><rect x=&quot;735.7&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(222,222,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;738.70&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>__memset_avx2 (37,993,027 samples, 0.50%)</title><rect x=&quot;529.2&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(222,222,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;532.20&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>tcp_input_tmp (37,994,253 samples, 0.50%)</title><rect x=&quot;741.6&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;744.60&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>nvme_pcie_qpair_process_completions (151,975,878 samples, 2.00%)</title><rect x=&quot;387.6&quot; y=&quot;37&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(177,177,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;390.60&quot; y=&quot;47.5&quot; >n..</text>
+</g>
+<g >
+<title>ip_send_one (37,994,108 samples, 0.50%)</title><rect x=&quot;310.9&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(216,216,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;313.90&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>ix_handle_events (37,994,075 samples, 0.50%)</title><rect x=&quot;676.7&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(205,205,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;679.70&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_poll (1,329,768,633 samples, 17.50%)</title><rect x=&quot;39.5&quot; y=&quot;69&quot; width=&quot;206.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(195,195,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;42.50&quot; y=&quot;79.5&quot; >eth_process_poll</text>
+</g>
+<g >
+<title>timer_run (1,443,759,210 samples, 19.00%)</title><rect x=&quot;965.8&quot; y=&quot;69&quot; width=&quot;224.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,203,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;968.80&quot; y=&quot;79.5&quot; >timer_run</text>
+</g>
+<g >
+<title>tcp_output (303,947,794 samples, 4.00%)</title><rect x=&quot;747.5&quot; y=&quot;69&quot; width=&quot;47.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(227,227,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;750.50&quot; y=&quot;79.5&quot; >tcp_..</text>
+</g>
+</g>
+</svg>
+</body></html>"></iframe></div>
+</div><div><p>8-10</p>
+<div class="container" style="padding-top: 208px;"><iframe width=1200 height=156 srcdoc="<html><head></head><body style=&quot;margin: 0; font-size: 0px; letter-spacing: 0px; word-spacing: 0px;&quot;>
+
+<svg version=&quot;1.1&quot; width=&quot;1200&quot; height=&quot;150&quot; onload=&quot;init(evt)&quot; viewBox=&quot;0 0 1200 150&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;>
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id=&quot;background&quot; y1=&quot;0&quot; y2=&quot;1&quot; x1=&quot;0&quot; x2=&quot;0&quot; >
+		<stop stop-color=&quot;#eeeeee&quot; offset=&quot;5%&quot; />
+		<stop stop-color=&quot;#eeeeb0&quot; offset=&quot;95%&quot; />
+	</linearGradient>
+</defs>
+<style type=&quot;text/css&quot;>
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type=&quot;text/ecmascript&quot;>
+<![CDATA[
+	&quot;use strict&quot;;
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById(&quot;details&quot;).firstChild;
+		searchbtn = document.getElementById(&quot;search&quot;);
+		ignorecaseBtn = document.getElementById(&quot;ignorecase&quot;);
+		unzoombtn = document.getElementById(&quot;unzoom&quot;);
+		matchedtxt = document.getElementById(&quot;matched&quot;);
+		svg = document.getElementsByTagName(&quot;svg&quot;)[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x=&quot;' + params.x + '&quot;][y=&quot;' + params.y + '&quot;]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener(&quot;click&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == &quot;a&quot;) {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains(&quot;parent&quot;)) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add(&quot;hide&quot;);
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector(&quot;rect&quot;);
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == &quot;unzoom&quot;) clearzoom();
+		else if (e.target.id == &quot;search&quot;) search_prompt();
+		else if (e.target.id == &quot;ignorecase&quot;) toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener(&quot;mouseover&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = &quot;Function: &quot; + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener(&quot;mouseout&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener(&quot;keydown&quot;,function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split(&quot;=&quot;);
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = &quot;?&quot;;
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == &quot;&&quot;)
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == &quot;frames&quot;) return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes[&quot;_orig_&quot; + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute(&quot;_orig_&quot; + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes[&quot;_orig_&quot;+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes[&quot;_orig_&quot; + attr].value;
+		e.removeAttribute(&quot;_orig_&quot;+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, &quot;title&quot;).firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, &quot;rect&quot;);
+		var t = find_child(e, &quot;text&quot;);
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, &quot;title&quot;).textContent.replace(/\([^(]*\)$/,&quot;&quot;);
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = &quot;&quot;;
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + &quot;..&quot;;
+				return;
+			}
+		}
+		t.textContent = &quot;&quot;;
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, &quot;x&quot;);
+			orig_load(e, &quot;width&quot;);
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == &quot;text&quot;)
+					e.attributes.x.value = find_child(e.parentNode, &quot;rect[x]&quot;).attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, &quot;rect&quot;).attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove(&quot;hide&quot;);
+
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, &quot;rect&quot;).attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add(&quot;parent&quot;);
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add(&quot;hide&quot;);
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add(&quot;hide&quot;);
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add(&quot;hide&quot;);
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove(&quot;parent&quot;);
+			el[i].classList.remove(&quot;hide&quot;);
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add(&quot;show&quot;);
+		} else {
+			ignorecaseBtn.classList.remove(&quot;show&quot;);
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll(&quot;#frames rect&quot;);
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], &quot;fill&quot;)
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt(&quot;Enter a search term (regexp &quot; +
+			    &quot;allowed, eg: ^ext4_)&quot;
+			    + (ignorecase ? &quot;, ignoring case&quot; : &quot;&quot;)
+			    + &quot;\nPress Ctrl-i to toggle case sensitivity&quot;, &quot;&quot;);
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove(&quot;show&quot;);
+			searchbtn.firstChild.nodeValue = &quot;Search&quot;
+			matchedtxt.classList.add(&quot;hide&quot;);
+			matchedtxt.firstChild.nodeValue = &quot;&quot;
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById(&quot;frames&quot;).children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, &quot;rect&quot;);
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, &quot;fill&quot;);
+				rect.attributes.fill.value = &quot;rgb(230,0,230)&quot;;
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add(&quot;show&quot;);
+		searchbtn.firstChild.nodeValue = &quot;Reset Search&quot;;
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove(&quot;hide&quot;);
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = &quot;Matched: &quot; + pct + &quot;%&quot;;
+	}
+]]>
+</script>
+<rect x=&quot;0.0&quot; y=&quot;0&quot; width=&quot;1200.0&quot; height=&quot;150.0&quot; fill=&quot;url(#background)&quot;  />
+<text id=&quot;title&quot; x=&quot;600.00&quot; y=&quot;24&quot; >Flame Graph</text>
+<text id=&quot;details&quot; x=&quot;10.00&quot; y=&quot;133&quot; > </text>
+<text id=&quot;unzoom&quot; x=&quot;10.00&quot; y=&quot;24&quot; class=&quot;hide&quot;>Reset Zoom</text>
+<text id=&quot;search&quot; x=&quot;1090.00&quot; y=&quot;24&quot; >Search</text>
+<text id=&quot;ignorecase&quot; x=&quot;1174.00&quot; y=&quot;24&quot; >ic</text>
+<text id=&quot;matched&quot; x=&quot;1090.00&quot; y=&quot;133&quot; > </text>
+<g id=&quot;frames&quot;>
+<g >
+<title>i40e_xmit_pkts (75,987,267 samples, 1.00%)</title><rect x=&quot;204.7&quot; y=&quot;53&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(192,192,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;207.70&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>nvme_pcie_qpair_process_completions (531,982,295 samples, 7.00%)</title><rect x=&quot;281.4&quot; y=&quot;37&quot; width=&quot;82.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(214,214,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;284.40&quot; y=&quot;47.5&quot; >nvme_pcie..</text>
+</g>
+<g >
+<title>nophttpd-?/9587 (7,599,897,632 samples, 100.00%)</title><rect x=&quot;10.0&quot; y=&quot;85&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(214,214,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;95.5&quot; >nophttpd-?/9587</text>
+</g>
+<g >
+<title>pp_stream_handler (37,994,027 samples, 0.50%)</title><rect x=&quot;706.2&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(195,195,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;709.20&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>tcp_output_packet (75,986,521 samples, 1.00%)</title><rect x=&quot;788.8&quot; y=&quot;69&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(225,225,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;791.80&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>all (7,599,897,632 samples, 100%)</title><rect x=&quot;10.0&quot; y=&quot;101&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(183,183,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;111.5&quot; ></text>
+</g>
+<g >
+<title>[unknown] (113,993,937 samples, 1.50%)</title><rect x=&quot;10.0&quot; y=&quot;69&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>memset@plt (113,993,937 samples, 1.50%)</title><rect x=&quot;10.0&quot; y=&quot;53&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,203,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>nvme_sched (2,090,009,464 samples, 27.50%)</title><rect x=&quot;364.0&quot; y=&quot;69&quot; width=&quot;324.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(219,219,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;367.00&quot; y=&quot;79.5&quot; >nvme_sched</text>
+</g>
+<g >
+<title>eth_process_poll (1,025,983,497 samples, 13.50%)</title><rect x=&quot;27.7&quot; y=&quot;69&quot; width=&quot;159.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(223,223,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;30.70&quot; y=&quot;79.5&quot; >eth_process_poll</text>
+</g>
+<g >
+<title>ixev_wait (75,993,486 samples, 1.00%)</title><rect x=&quot;723.9&quot; y=&quot;53&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(185,185,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;726.90&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>__memset_avx2 (76,000,624 samples, 1.00%)</title><rect x=&quot;676.7&quot; y=&quot;53&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(213,213,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;679.70&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>ix_handle_events (75,994,451 samples, 1.00%)</title><rect x=&quot;712.1&quot; y=&quot;53&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(216,216,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;715.10&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (37,993,412 samples, 0.50%)</title><rect x=&quot;700.3&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(219,219,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;703.30&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>spdk_nvme_qpair_process_completions (835,986,255 samples, 11.00%)</title><rect x=&quot;234.2&quot; y=&quot;53&quot; width=&quot;129.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(178,178,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;237.20&quot; y=&quot;63.5&quot; >spdk_nvme_qpair_..</text>
+</g>
+<g >
+<title>pbuf_clen (37,993,511 samples, 0.50%)</title><rect x=&quot;688.5&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,203,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;691.50&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>ix_poll (38,000,065 samples, 0.50%)</title><rect x=&quot;729.8&quot; y=&quot;37&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(226,226,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;732.80&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>timer_now (949,996,257 samples, 12.50%)</title><rect x=&quot;800.6&quot; y=&quot;69&quot; width=&quot;147.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(226,226,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;803.60&quot; y=&quot;79.5&quot; >timer_now</text>
+</g>
+<g >
+<title>ixev_send (37,994,027 samples, 0.50%)</title><rect x=&quot;706.2&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(204,204,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;709.20&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_send (189,988,797 samples, 2.50%)</title><rect x=&quot;187.0&quot; y=&quot;69&quot; width=&quot;29.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(199,199,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;190.00&quot; y=&quot;79.5&quot; >et..</text>
+</g>
+<g >
+<title>pbuf_free (37,993,153 samples, 0.50%)</title><rect x=&quot;694.4&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(223,223,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;697.40&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>__memcpy_avx_unaligned (37,994,027 samples, 0.50%)</title><rect x=&quot;706.2&quot; y=&quot;37&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(215,215,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;709.20&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>sys_bpoll (342,007,213 samples, 4.50%)</title><rect x=&quot;735.7&quot; y=&quot;69&quot; width=&quot;53.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,218,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;738.70&quot; y=&quot;79.5&quot; >sys_b..</text>
+</g>
+<g >
+<title>reflex_setup_thread (151,987,937 samples, 2.00%)</title><rect x=&quot;712.1&quot; y=&quot;69&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(180,180,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;715.10&quot; y=&quot;79.5&quot; >r..</text>
+</g>
+<g >
+<title>timer_run (1,557,982,039 samples, 20.50%)</title><rect x=&quot;948.1&quot; y=&quot;69&quot; width=&quot;241.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(184,184,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;951.10&quot; y=&quot;79.5&quot; >timer_run</text>
+</g>
+<g >
+<title>pp_main_handler (37,993,412 samples, 0.50%)</title><rect x=&quot;700.3&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(175,175,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;703.30&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>i40e_recv_scattered_pkts (569,994,477 samples, 7.50%)</title><rect x=&quot;98.5&quot; y=&quot;53&quot; width=&quot;88.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(226,226,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;101.50&quot; y=&quot;63.5&quot; >i40e_recv_..</text>
+</g>
+<g >
+<title>nvme_process_completions (949,987,867 samples, 12.50%)</title><rect x=&quot;216.5&quot; y=&quot;69&quot; width=&quot;147.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;219.50&quot; y=&quot;79.5&quot; >nvme_process_compl..</text>
+</g>
+</g>
+</svg>
+</body></html>"></iframe></div>
+</div><div><p>10-12</p>
+<div class="container" style="padding-top: 160px;"><iframe width=1200 height=204 srcdoc="<html><head></head><body style=&quot;margin: 0; font-size: 0px; letter-spacing: 0px; word-spacing: 0px;&quot;>
+
+<svg version=&quot;1.1&quot; width=&quot;1200&quot; height=&quot;198&quot; onload=&quot;init(evt)&quot; viewBox=&quot;0 0 1200 198&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;>
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id=&quot;background&quot; y1=&quot;0&quot; y2=&quot;1&quot; x1=&quot;0&quot; x2=&quot;0&quot; >
+		<stop stop-color=&quot;#eeeeee&quot; offset=&quot;5%&quot; />
+		<stop stop-color=&quot;#eeeeb0&quot; offset=&quot;95%&quot; />
+	</linearGradient>
+</defs>
+<style type=&quot;text/css&quot;>
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type=&quot;text/ecmascript&quot;>
+<![CDATA[
+	&quot;use strict&quot;;
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById(&quot;details&quot;).firstChild;
+		searchbtn = document.getElementById(&quot;search&quot;);
+		ignorecaseBtn = document.getElementById(&quot;ignorecase&quot;);
+		unzoombtn = document.getElementById(&quot;unzoom&quot;);
+		matchedtxt = document.getElementById(&quot;matched&quot;);
+		svg = document.getElementsByTagName(&quot;svg&quot;)[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x=&quot;' + params.x + '&quot;][y=&quot;' + params.y + '&quot;]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener(&quot;click&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == &quot;a&quot;) {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains(&quot;parent&quot;)) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add(&quot;hide&quot;);
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector(&quot;rect&quot;);
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == &quot;unzoom&quot;) clearzoom();
+		else if (e.target.id == &quot;search&quot;) search_prompt();
+		else if (e.target.id == &quot;ignorecase&quot;) toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener(&quot;mouseover&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = &quot;Function: &quot; + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener(&quot;mouseout&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener(&quot;keydown&quot;,function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split(&quot;=&quot;);
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = &quot;?&quot;;
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == &quot;&&quot;)
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == &quot;frames&quot;) return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes[&quot;_orig_&quot; + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute(&quot;_orig_&quot; + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes[&quot;_orig_&quot;+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes[&quot;_orig_&quot; + attr].value;
+		e.removeAttribute(&quot;_orig_&quot;+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, &quot;title&quot;).firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, &quot;rect&quot;);
+		var t = find_child(e, &quot;text&quot;);
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, &quot;title&quot;).textContent.replace(/\([^(]*\)$/,&quot;&quot;);
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = &quot;&quot;;
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + &quot;..&quot;;
+				return;
+			}
+		}
+		t.textContent = &quot;&quot;;
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, &quot;x&quot;);
+			orig_load(e, &quot;width&quot;);
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == &quot;text&quot;)
+					e.attributes.x.value = find_child(e.parentNode, &quot;rect[x]&quot;).attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, &quot;rect&quot;).attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove(&quot;hide&quot;);
+
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, &quot;rect&quot;).attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add(&quot;parent&quot;);
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add(&quot;hide&quot;);
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add(&quot;hide&quot;);
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add(&quot;hide&quot;);
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove(&quot;parent&quot;);
+			el[i].classList.remove(&quot;hide&quot;);
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add(&quot;show&quot;);
+		} else {
+			ignorecaseBtn.classList.remove(&quot;show&quot;);
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll(&quot;#frames rect&quot;);
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], &quot;fill&quot;)
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt(&quot;Enter a search term (regexp &quot; +
+			    &quot;allowed, eg: ^ext4_)&quot;
+			    + (ignorecase ? &quot;, ignoring case&quot; : &quot;&quot;)
+			    + &quot;\nPress Ctrl-i to toggle case sensitivity&quot;, &quot;&quot;);
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove(&quot;show&quot;);
+			searchbtn.firstChild.nodeValue = &quot;Search&quot;
+			matchedtxt.classList.add(&quot;hide&quot;);
+			matchedtxt.firstChild.nodeValue = &quot;&quot;
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById(&quot;frames&quot;).children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, &quot;rect&quot;);
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, &quot;fill&quot;);
+				rect.attributes.fill.value = &quot;rgb(230,0,230)&quot;;
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add(&quot;show&quot;);
+		searchbtn.firstChild.nodeValue = &quot;Reset Search&quot;;
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove(&quot;hide&quot;);
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = &quot;Matched: &quot; + pct + &quot;%&quot;;
+	}
+]]>
+</script>
+<rect x=&quot;0.0&quot; y=&quot;0&quot; width=&quot;1200.0&quot; height=&quot;198.0&quot; fill=&quot;url(#background)&quot;  />
+<text id=&quot;title&quot; x=&quot;600.00&quot; y=&quot;24&quot; >Flame Graph</text>
+<text id=&quot;details&quot; x=&quot;10.00&quot; y=&quot;181&quot; > </text>
+<text id=&quot;unzoom&quot; x=&quot;10.00&quot; y=&quot;24&quot; class=&quot;hide&quot;>Reset Zoom</text>
+<text id=&quot;search&quot; x=&quot;1090.00&quot; y=&quot;24&quot; >Search</text>
+<text id=&quot;ignorecase&quot; x=&quot;1174.00&quot; y=&quot;24&quot; >ic</text>
+<text id=&quot;matched&quot; x=&quot;1090.00&quot; y=&quot;181&quot; > </text>
+<g id=&quot;frames&quot;>
+<g >
+<title>eth_process_poll (684,000,041 samples, 9.00%)</title><rect x=&quot;39.5&quot; y=&quot;117&quot; width=&quot;106.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(179,179,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;42.50&quot; y=&quot;127.5&quot; >eth_process_..</text>
+</g>
+<g >
+<title>i40e_recv_scattered_pkts (379,994,263 samples, 5.00%)</title><rect x=&quot;86.7&quot; y=&quot;101&quot; width=&quot;59.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(178,178,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;89.70&quot; y=&quot;111.5&quot; >i40e_r..</text>
+</g>
+<g >
+<title>all (7,600,084,902 samples, 100%)</title><rect x=&quot;10.0&quot; y=&quot;149&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(199,199,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;159.5&quot; ></text>
+</g>
+<g >
+<title>nvme_pcie_qpair_process_completions (189,995,792 samples, 2.50%)</title><rect x=&quot;251.9&quot; y=&quot;85&quot; width=&quot;29.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(198,198,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;254.90&quot; y=&quot;95.5&quot; >nv..</text>
+</g>
+<g >
+<title>_dl_start_user (37,996,400 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;117&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(205,205,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;127.5&quot; ></text>
+</g>
+<g >
+<title>ixev_wait (304,002,973 samples, 4.00%)</title><rect x=&quot;576.4&quot; y=&quot;101&quot; width=&quot;47.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(224,224,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;579.40&quot; y=&quot;111.5&quot; >ixev..</text>
+</g>
+<g >
+<title>ix_poll (113,999,144 samples, 1.50%)</title><rect x=&quot;605.9&quot; y=&quot;85&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(189,189,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;608.90&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>_dl_sysdep_start (37,996,400 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;85&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(199,199,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>reflex_setup_thread (380,003,967 samples, 5.00%)</title><rect x=&quot;564.6&quot; y=&quot;117&quot; width=&quot;59.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(194,194,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;567.60&quot; y=&quot;127.5&quot; >reflex..</text>
+</g>
+<g >
+<title>sys_bpoll (114,002,643 samples, 1.50%)</title><rect x=&quot;623.6&quot; y=&quot;117&quot; width=&quot;17.7&quot; height=&quot;15.0&quot; fill=&quot;rgb(180,180,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;626.60&quot; y=&quot;127.5&quot; ></text>
+</g>
+<g >
+<title>timer_run (2,470,036,322 samples, 32.50%)</title><rect x=&quot;806.5&quot; y=&quot;117&quot; width=&quot;383.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(216,216,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;809.50&quot; y=&quot;127.5&quot; >timer_run</text>
+</g>
+<g >
+<title>timer_now (1,064,017,929 samples, 14.00%)</title><rect x=&quot;641.3&quot; y=&quot;117&quot; width=&quot;165.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(217,217,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;644.30&quot; y=&quot;127.5&quot; >timer_now</text>
+</g>
+<g >
+<title>cpu_do_bookkeeping (151,998,932 samples, 2.00%)</title><rect x=&quot;15.9&quot; y=&quot;117&quot; width=&quot;23.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(214,214,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;18.90&quot; y=&quot;127.5&quot; >c..</text>
+</g>
+<g >
+<title>_dl_start (37,996,400 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;101&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(202,202,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;111.5&quot; ></text>
+</g>
+<g >
+<title>spdk_nvme_qpair_process_completions (456,000,543 samples, 6.00%)</title><rect x=&quot;210.6&quot; y=&quot;101&quot; width=&quot;70.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(226,226,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;213.60&quot; y=&quot;111.5&quot; >spdk_nv..</text>
+</g>
+<g >
+<title>eth_process_send (228,005,318 samples, 3.00%)</title><rect x=&quot;145.7&quot; y=&quot;117&quot; width=&quot;35.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(202,202,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;148.70&quot; y=&quot;127.5&quot; >eth..</text>
+</g>
+<g >
+<title>_dl_allocate_tls_init (37,996,400 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;53&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(187,187,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>dl_main (37,996,400 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;69&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(201,201,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>nophttpd-?/9587 (7,562,088,502 samples, 99.50%)</title><rect x=&quot;15.9&quot; y=&quot;133&quot; width=&quot;1174.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,221,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;18.90&quot; y=&quot;143.5&quot; >nophttpd-?/9587</text>
+</g>
+<g >
+<title>grep-?/9620 (37,996,400 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;133&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,203,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;143.5&quot; ></text>
+</g>
+<g >
+<title>nvme_sched (1,824,019,623 samples, 24.00%)</title><rect x=&quot;281.4&quot; y=&quot;117&quot; width=&quot;283.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(184,184,53)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;284.40&quot; y=&quot;127.5&quot; >nvme_sched</text>
+</g>
+<g >
+<title>nvme_process_completions (646,003,727 samples, 8.50%)</title><rect x=&quot;181.1&quot; y=&quot;117&quot; width=&quot;100.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(205,205,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;184.10&quot; y=&quot;127.5&quot; >nvme_process..</text>
+</g>
+<g >
+<title>mempcpy (37,996,400 samples, 0.50%)</title><rect x=&quot;10.0&quot; y=&quot;37&quot; width=&quot;5.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(211,211,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>ix_handle_events (76,000,994 samples, 1.00%)</title><rect x=&quot;564.6&quot; y=&quot;101&quot; width=&quot;11.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(196,196,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;567.60&quot; y=&quot;111.5&quot; ></text>
+</g>
+</g>
+</svg>
+</body></html>"></iframe></div>
+</div><div><p>12-</p>
+<div class="container" style="padding-top: 32px;"><iframe width=1200 height=332 srcdoc="<html><head></head><body style=&quot;margin: 0; font-size: 0px; letter-spacing: 0px; word-spacing: 0px;&quot;>
+
+<svg version=&quot;1.1&quot; width=&quot;1200&quot; height=&quot;326&quot; onload=&quot;init(evt)&quot; viewBox=&quot;0 0 1200 326&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot;>
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id=&quot;background&quot; y1=&quot;0&quot; y2=&quot;1&quot; x1=&quot;0&quot; x2=&quot;0&quot; >
+		<stop stop-color=&quot;#eeeeee&quot; offset=&quot;5%&quot; />
+		<stop stop-color=&quot;#eeeeb0&quot; offset=&quot;95%&quot; />
+	</linearGradient>
+</defs>
+<style type=&quot;text/css&quot;>
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type=&quot;text/ecmascript&quot;>
+<![CDATA[
+	&quot;use strict&quot;;
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById(&quot;details&quot;).firstChild;
+		searchbtn = document.getElementById(&quot;search&quot;);
+		ignorecaseBtn = document.getElementById(&quot;ignorecase&quot;);
+		unzoombtn = document.getElementById(&quot;unzoom&quot;);
+		matchedtxt = document.getElementById(&quot;matched&quot;);
+		svg = document.getElementsByTagName(&quot;svg&quot;)[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x=&quot;' + params.x + '&quot;][y=&quot;' + params.y + '&quot;]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener(&quot;click&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == &quot;a&quot;) {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains(&quot;parent&quot;)) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add(&quot;hide&quot;);
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector(&quot;rect&quot;);
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == &quot;unzoom&quot;) clearzoom();
+		else if (e.target.id == &quot;search&quot;) search_prompt();
+		else if (e.target.id == &quot;ignorecase&quot;) toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener(&quot;mouseover&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = &quot;Function: &quot; + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener(&quot;mouseout&quot;, function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener(&quot;keydown&quot;,function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split(&quot;=&quot;);
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = &quot;?&quot;;
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == &quot;&&quot;)
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == &quot;frames&quot;) return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes[&quot;_orig_&quot; + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute(&quot;_orig_&quot; + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes[&quot;_orig_&quot;+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes[&quot;_orig_&quot; + attr].value;
+		e.removeAttribute(&quot;_orig_&quot;+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, &quot;title&quot;).firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, &quot;rect&quot;);
+		var t = find_child(e, &quot;text&quot;);
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, &quot;title&quot;).textContent.replace(/\([^(]*\)$/,&quot;&quot;);
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = &quot;&quot;;
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + &quot;..&quot;;
+				return;
+			}
+		}
+		t.textContent = &quot;&quot;;
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, &quot;x&quot;);
+			orig_load(e, &quot;width&quot;);
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == &quot;text&quot;)
+					e.attributes.x.value = find_child(e.parentNode, &quot;rect[x]&quot;).attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, &quot;x&quot;);
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, &quot;width&quot;);
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, &quot;rect&quot;).attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove(&quot;hide&quot;);
+
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, &quot;rect&quot;).attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add(&quot;parent&quot;);
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add(&quot;hide&quot;);
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add(&quot;hide&quot;);
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add(&quot;hide&quot;);
+		var el = document.getElementById(&quot;frames&quot;).children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove(&quot;parent&quot;);
+			el[i].classList.remove(&quot;hide&quot;);
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add(&quot;show&quot;);
+		} else {
+			ignorecaseBtn.classList.remove(&quot;show&quot;);
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll(&quot;#frames rect&quot;);
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], &quot;fill&quot;)
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt(&quot;Enter a search term (regexp &quot; +
+			    &quot;allowed, eg: ^ext4_)&quot;
+			    + (ignorecase ? &quot;, ignoring case&quot; : &quot;&quot;)
+			    + &quot;\nPress Ctrl-i to toggle case sensitivity&quot;, &quot;&quot;);
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove(&quot;show&quot;);
+			searchbtn.firstChild.nodeValue = &quot;Search&quot;
+			matchedtxt.classList.add(&quot;hide&quot;);
+			matchedtxt.firstChild.nodeValue = &quot;&quot;
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById(&quot;frames&quot;).children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, &quot;rect&quot;);
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, &quot;fill&quot;);
+				rect.attributes.fill.value = &quot;rgb(230,0,230)&quot;;
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add(&quot;show&quot;);
+		searchbtn.firstChild.nodeValue = &quot;Reset Search&quot;;
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove(&quot;hide&quot;);
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = &quot;Matched: &quot; + pct + &quot;%&quot;;
+	}
+]]>
+</script>
+<rect x=&quot;0.0&quot; y=&quot;0&quot; width=&quot;1200.0&quot; height=&quot;326.0&quot; fill=&quot;url(#background)&quot;  />
+<text id=&quot;title&quot; x=&quot;600.00&quot; y=&quot;24&quot; >Flame Graph</text>
+<text id=&quot;details&quot; x=&quot;10.00&quot; y=&quot;309&quot; > </text>
+<text id=&quot;unzoom&quot; x=&quot;10.00&quot; y=&quot;24&quot; class=&quot;hide&quot;>Reset Zoom</text>
+<text id=&quot;search&quot; x=&quot;1090.00&quot; y=&quot;24&quot; >Search</text>
+<text id=&quot;ignorecase&quot; x=&quot;1174.00&quot; y=&quot;24&quot; >ic</text>
+<text id=&quot;matched&quot; x=&quot;1090.00&quot; y=&quot;309&quot; > </text>
+<g id=&quot;frames&quot;>
+<g >
+<title>timer_now (645,927,200 samples, 13.39%)</title><rect x=&quot;706.9&quot; y=&quot;245&quot; width=&quot;157.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(178,178,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;709.86&quot; y=&quot;255.5&quot; >timer_now</text>
+</g>
+<g >
+<title>entry_SYSCALL_64_fastpath (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;133&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,54,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;143.5&quot; ></text>
+</g>
+<g >
+<title>nvme_sched (1,063,900,662 samples, 22.05%)</title><rect x=&quot;363.1&quot; y=&quot;245&quot; width=&quot;260.1&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;366.07&quot; y=&quot;255.5&quot; >nvme_sched</text>
+</g>
+<g >
+<title>__GI___libc_read (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;149&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,218,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;159.5&quot; ></text>
+</g>
+<g >
+<title>__xstat64 (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;165&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(182,182,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;175.5&quot; ></text>
+</g>
+<g >
+<title>__vfs_read (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;85&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(242,111,111)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>nvme_process_completions (645,947,071 samples, 13.39%)</title><rect x=&quot;205.1&quot; y=&quot;245&quot; width=&quot;158.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(198,198,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;208.12&quot; y=&quot;255.5&quot; >nvme_process_complet..</text>
+</g>
+<g >
+<title>[ps] (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;213&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(213,213,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;223.5&quot; ></text>
+</g>
+<g >
+<title>ix_poll (151,993,307 samples, 3.15%)</title><rect x=&quot;641.8&quot; y=&quot;213&quot; width=&quot;37.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(214,214,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;644.82&quot; y=&quot;223.5&quot; >ix_..</text>
+</g>
+<g >
+<title>ix_handle_events (75,990,458 samples, 1.57%)</title><rect x=&quot;623.2&quot; y=&quot;229&quot; width=&quot;18.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(226,226,68)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;626.23&quot; y=&quot;239.5&quot; ></text>
+</g>
+<g >
+<title>SYSC_newstat (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;117&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(208,61,61)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;127.5&quot; ></text>
+</g>
+<g >
+<title>readproc (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;197&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(182,182,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;207.5&quot; ></text>
+</g>
+<g >
+<title>readproc (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;197&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(190,190,55)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;207.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_send (113,993,049 samples, 2.36%)</title><rect x=&quot;177.2&quot; y=&quot;245&quot; width=&quot;27.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(175,175,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;180.24&quot; y=&quot;255.5&quot; >e..</text>
+</g>
+<g >
+<title>ps-?/9654 (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;261&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(202,202,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>mutex_lock (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;53&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,92,92)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>seq_read (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;69&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(211,67,67)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>eth_process_poll (607,944,347 samples, 12.60%)</title><rect x=&quot;28.6&quot; y=&quot;245&quot; width=&quot;148.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(204,204,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;31.58&quot; y=&quot;255.5&quot; >eth_process_poll</text>
+</g>
+<g >
+<title>i40e_recv_scattered_pkts (341,967,672 samples, 7.09%)</title><rect x=&quot;93.6&quot; y=&quot;229&quot; width=&quot;83.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(203,203,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;96.62&quot; y=&quot;239.5&quot; >i40e_recv..</text>
+</g>
+<g >
+<title>nvme_transport_qpair_process_completions (37,999,145 samples, 0.79%)</title><rect x=&quot;353.8&quot; y=&quot;213&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(193,193,56)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;356.78&quot; y=&quot;223.5&quot; ></text>
+</g>
+<g >
+<title>[libprocps.so.4.0.0] (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;181&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(178,178,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;191.5&quot; ></text>
+</g>
+<g >
+<title>sys_bpoll (113,988,797 samples, 2.36%)</title><rect x=&quot;679.0&quot; y=&quot;245&quot; width=&quot;27.9&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;681.98&quot; y=&quot;255.5&quot; >s..</text>
+</g>
+<g >
+<title>[unknown] (37,996,030 samples, 0.79%)</title><rect x=&quot;10.0&quot; y=&quot;245&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(180,180,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;255.5&quot; ></text>
+</g>
+<g >
+<title>[libprocps.so.4.0.0] (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;165&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;175.5&quot; ></text>
+</g>
+<g >
+<title>generic_fillattr (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;37&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,76,76)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;47.5&quot; ></text>
+</g>
+<g >
+<title>sys_newstat (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;133&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(242,111,111)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;143.5&quot; ></text>
+</g>
+<g >
+<title>nophttpd-?/9587 (4,749,543,938 samples, 98.43%)</title><rect x=&quot;10.0&quot; y=&quot;261&quot; width=&quot;1161.4&quot; height=&quot;15.0&quot; fill=&quot;rgb(204,204,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;271.5&quot; >nophttpd-?/9587</text>
+</g>
+<g >
+<title>timer_run (1,253,867,306 samples, 25.98%)</title><rect x=&quot;864.8&quot; y=&quot;245&quot; width=&quot;306.6&quot; height=&quot;15.0&quot; fill=&quot;rgb(217,217,65)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;867.81&quot; y=&quot;255.5&quot; >timer_run</text>
+</g>
+<g >
+<title>spdk_nvme_qpair_process_completions (455,965,460 samples, 9.45%)</title><rect x=&quot;251.6&quot; y=&quot;229&quot; width=&quot;111.5&quot; height=&quot;15.0&quot; fill=&quot;rgb(194,194,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;254.58&quot; y=&quot;239.5&quot; >spdk_nvme_qpa..</text>
+</g>
+<g >
+<title>[ps] (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;245&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(196,196,57)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;255.5&quot; ></text>
+</g>
+<g >
+<title>vfs_getattr_nosec (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;69&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(230,94,94)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;79.5&quot; ></text>
+</g>
+<g >
+<title>[libprocps.so.4.0.0] (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;181&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(201,201,59)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;191.5&quot; ></text>
+</g>
+<g >
+<title>ps-?/9624 (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;261&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(186,186,54)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;271.5&quot; ></text>
+</g>
+<g >
+<title>__libc_start_main (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;229&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(212,212,63)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;239.5&quot; ></text>
+</g>
+<g >
+<title>__libc_start_main (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;229&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(221,221,66)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;239.5&quot; ></text>
+</g>
+<g >
+<title>reflex_setup_thread (227,983,765 samples, 4.72%)</title><rect x=&quot;623.2&quot; y=&quot;245&quot; width=&quot;55.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(198,198,58)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;626.23&quot; y=&quot;255.5&quot; >refle..</text>
+</g>
+<g >
+<title>nvme_pcie_qpair_process_completions (227,978,832 samples, 4.72%)</title><rect x=&quot;298.0&quot; y=&quot;213&quot; width=&quot;55.8&quot; height=&quot;15.0&quot; fill=&quot;rgb(213,213,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;301.03&quot; y=&quot;223.5&quot; >nvme_..</text>
+</g>
+<g >
+<title>[ps] (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;213&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(176,176,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;223.5&quot; ></text>
+</g>
+<g >
+<title>entry_SYSCALL_64_fastpath (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;149&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(233,98,98)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;159.5&quot; ></text>
+</g>
+<g >
+<title>vfs_getattr (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;85&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(201,52,52)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;95.5&quot; ></text>
+</g>
+<g >
+<title>vfs_statx (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;101&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(232,96,96)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;111.5&quot; ></text>
+</g>
+<g >
+<title>ixev_wait (151,993,307 samples, 3.15%)</title><rect x=&quot;641.8&quot; y=&quot;229&quot; width=&quot;37.2&quot; height=&quot;15.0&quot; fill=&quot;rgb(214,214,64)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;644.82&quot; y=&quot;239.5&quot; >ixe..</text>
+</g>
+<g >
+<title>[ps] (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;245&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(175,175,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;255.5&quot; ></text>
+</g>
+<g >
+<title>__memset_avx2 (37,996,593 samples, 0.79%)</title><rect x=&quot;613.9&quot; y=&quot;229&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(178,178,51)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;616.94&quot; y=&quot;239.5&quot; ></text>
+</g>
+<g >
+<title>vfs_read (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;101&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(218,77,77)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;111.5&quot; ></text>
+</g>
+<g >
+<title>sys_read (37,991,766 samples, 0.79%)</title><rect x=&quot;1171.4&quot; y=&quot;117&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(251,124,124)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1174.42&quot; y=&quot;127.5&quot; ></text>
+</g>
+<g >
+<title>all (4,825,534,223 samples, 100%)</title><rect x=&quot;10.0&quot; y=&quot;277&quot; width=&quot;1180.0&quot; height=&quot;15.0&quot; fill=&quot;rgb(175,175,50)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;287.5&quot; ></text>
+</g>
+<g >
+<title>pid_getattr (37,998,519 samples, 0.79%)</title><rect x=&quot;1180.7&quot; y=&quot;53&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(249,122,122)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;1183.71&quot; y=&quot;63.5&quot; ></text>
+</g>
+<g >
+<title>cpu_do_bookkeeping (37,995,711 samples, 0.79%)</title><rect x=&quot;19.3&quot; y=&quot;245&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(229,229,69)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;22.29&quot; y=&quot;255.5&quot; ></text>
+</g>
+<g >
+<title>memset@plt (37,996,030 samples, 0.79%)</title><rect x=&quot;10.0&quot; y=&quot;229&quot; width=&quot;9.3&quot; height=&quot;15.0&quot; fill=&quot;rgb(204,204,60)&quot; rx=&quot;2&quot; ry=&quot;2&quot; />
+<text  x=&quot;13.00&quot; y=&quot;239.5&quot; ></text>
+</g>
+</g>
+</svg>
+</body></html>"></iframe></div>
+</div></div><h3>CPU 1</h3>
+<p>data not available</p>
+<h3>CPU 2</h3>
+<p>data not available</p>
+<h3>CPU 3</h3>
+<p>data not available</p>
+<h3>CPU 4</h3>
+<p>data not available</p>
+<h3>CPU 5</h3>
+<p>data not available</p>
+<h3>CPU 6</h3>
+<p>data not available</p>
+<h3>CPU 7</h3>
+<p>data not available</p>
+<h3>CPU 8</h3>
+<p>data not available</p>
+<h3>CPU 9</h3>
+<p>data not available</p>
+<h3>CPU 10</h3>
+<p>data not available</p>
+<h3>CPU 11</h3>
+<p>data not available</p>
+<h3>CPU 12</h3>
+<p>data not available</p>
+<h3>CPU 13</h3>
+<p>data not available</p>
+<h3>CPU 14</h3>
+<p>data not available</p>
+<h3>CPU 15</h3>
+<p>data not available</p>
+<h3>CPU 16</h3>
+<p>data not available</p>
+<h3>CPU 17</h3>
+<p>data not available</p>
+<h3>CPU 18</h3>
+<p>data not available</p>
+<h3>CPU 19</h3>
+<p>data not available</p>
+<h3>CPU 20</h3>
+<p>data not available</p>
+<h3>CPU 21</h3>
+<p>data not available</p>
+<h3>CPU 22</h3>
+<p>data not available</p>
+<h3>CPU 23</h3>
+<p>data not available</p>
+<h3>CPU 24</h3>
+<p>data not available</p>
+<h3>CPU 25</h3>
+<p>data not available</p>
+<h3>CPU 26</h3>
+<p>data not available</p>
+<h3>CPU 27</h3>
+<p>data not available</p>
+<h3>CPU 28</h3>
+<p>data not available</p>
+<h3>CPU 29</h3>
+<p>data not available</p>
+<h3>CPU 30</h3>
+<p>data not available</p>
+<h3>CPU 31</h3>
+<p>data not available</p>
+<h3>CPU 32</h3>
+<p>data not available</p>
+<h3>CPU 33</h3>
+<p>data not available</p>
+<h3>CPU 34</h3>
+<p>data not available</p>
+<h3>CPU 35</h3>
+<p>data not available</p>
+<h3>CPU 36</h3>
+<p>data not available</p>
+<h3>CPU 37</h3>
+<p>data not available</p>
+<h3>CPU 38</h3>
+<p>data not available</p>
+<h3>CPU 39</h3>
+<p>data not available</p>
+<h3>CPU 40</h3>
+<p>data not available</p>
+<h3>CPU 41</h3>
+<p>data not available</p>
+<h3>CPU 42</h3>
+<p>data not available</p>
+<h3>CPU 43</h3>
+<p>data not available</p>
+<h3>CPU 44</h3>
+<p>data not available</p>
+<h3>CPU 45</h3>
+<p>data not available</p>
+<h3>CPU 46</h3>
+<p>data not available</p>
+<h3>CPU 47</h3>
+<p>data not available</p>
+</body>
+</html>

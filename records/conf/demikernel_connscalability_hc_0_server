@@ -1,0 +1,362 @@
+[
+    {
+        "command": "make LIBOS=catnip all-examples-rust",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:40.386665"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:43.746376"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:43.862905"
+    },
+    {
+        "command": "ethtool -l enp23s0f0np0",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:43.972779"
+    },
+    {
+        "command": "ethtool -L enp23s0f0np0 combined 1 || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:44.089535"
+    },
+    {
+        "command": "ethtool -l enp23s0f1np1",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:44.540916"
+    },
+    {
+        "command": "ethtool -L enp23s0f1np1 combined 1 || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:44.652701"
+    },
+    {
+        "command": "ethtool -l enp24s0f0",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:45.126225"
+    },
+    {
+        "command": "ethtool -L enp24s0f0 combined 1 || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:45.235517"
+    },
+    {
+        "command": "ethtool -l enp24s0f1",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:59.289047"
+    },
+    {
+        "command": "ethtool -L enp24s0f1 combined 1 || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:59.400675"
+    },
+    {
+        "command": "ethtool -l ens1f0",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:10:59.991050"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1 || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:00.100244"
+    },
+    {
+        "command": "ethtool -l ens1f1",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:00.375988"
+    },
+    {
+        "command": "ethtool -L ens1f1 combined 1 || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:00.486700"
+    },
+    {
+        "command": "modprobe -r nvme",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:00.765577"
+    },
+    {
+        "command": "echo \"off\" > /sys/devices/system/cpu/smt/control",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:01.460945"
+    },
+    {
+        "command": "lscpu | grep \"^Thread(s) per core\" | awk \"{ print \\$4}\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:01.580018"
+    },
+    {
+        "command": "lscpu | grep \"^CPU(s)\" | awk \"{ print \\$2}\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:01.752334"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:01.920384"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/online",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:02.032840"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q mitigations=off",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:39.799306"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q intel_pstate=no_hwp",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:39.929228"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null 2>&1 || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.053538"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpuidle/current_driver",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.168966"
+    },
+    {
+        "command": "echo powersave | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.289399"
+    },
+    {
+        "command": "echo performance | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.421408"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.544977"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.653358"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.769259"
+    },
+    {
+        "command": "modprobe nvme",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:40.877829"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:41.105134"
+    },
+    {
+        "command": "modprobe -r mlx5_ib",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:41.221812"
+    },
+    {
+        "command": "modprobe mlx5_ib",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:48.894455"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:52.833177"
+    },
+    {
+        "command": "ethtool -i enp23s0f0np0 | grep \"driver:\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:52.940401"
+    },
+    {
+        "command": "ethtool -i enp23s0f1np1 | grep \"driver:\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:53.201331"
+    },
+    {
+        "command": "ethtool -i enp24s0f0 | grep \"driver:\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:53.563926"
+    },
+    {
+        "command": "ethtool -i enp24s0f1 | grep \"driver:\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:53.666282"
+    },
+    {
+        "command": "ethtool -i ens1f0 | grep \"driver:\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:53.769211"
+    },
+    {
+        "command": "ethtool -i ens1f1 | grep \"driver:\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:53.873949"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:54.974822"
+    },
+    {
+        "command": "cat /sys/class/net/enp23s0f0np0/address",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:55.078093"
+    },
+    {
+        "command": "./scripts/setup/hugepages.sh",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:11:55.173534"
+    },
+    {
+        "command": "! test -e /tmp/screen_02Jan24_19_12_06_139879442074016.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:06.749551"
+    },
+    {
+        "command": "screen -dmS 02Jan24_19_12_06_139879442074016 -L -Logfile /tmp/screen_02Jan24_19_12_06_139879442074016.log sh -c \"ARGS=\\\"--address 192.168.11.161:80  -l 64\\\" TEST=httpd sudo -E make LIBOS=catnip run-rust\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:06.847479"
+    },
+    {
+        "command": "screen -S 02Jan24_19_12_06_139879442074016 -X logfile flush 0",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:06.955476"
+    },
+    {
+        "command": "! test -e /tmp/screen_02Jan24_19_12_09_139879443504720.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:09.240815"
+    },
+    {
+        "command": "screen -dmS 02Jan24_19_12_09_139879443504720 -L -Logfile /tmp/screen_02Jan24_19_12_09_139879443504720.log sh -c \"mpstat -P ALL 2\"",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:09.346948"
+    },
+    {
+        "command": "screen -S 02Jan24_19_12_09_139879443504720 -X logfile flush 0",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:09.454507"
+    },
+    {
+        "command": "nstat -rn",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:09.563339"
+    },
+    {
+        "command": "screen -ls | grep 02Jan24_19_12_09_139879443504720 | cut -d. -f1",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:21.950456"
+    },
+    {
+        "command": "ps h --ppid 1797 -o pid",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.062789"
+    },
+    {
+        "command": "screen -S 02Jan24_19_12_09_139879443504720 -X stuff $'\\003'",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.197536"
+    },
+    {
+        "command": "kill -0 1798 2>/dev/null",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.304534"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.407060"
+    },
+    {
+        "command": "test -e /tmp/screen_02Jan24_19_12_09_139879443504720.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.516811"
+    },
+    {
+        "command": "cat /tmp/screen_02Jan24_19_12_09_139879443504720.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.622915"
+    },
+    {
+        "command": "rm /tmp/screen_02Jan24_19_12_09_139879443504720.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.729473"
+    },
+    {
+        "command": "nstat -z 'Tcp*'",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.835457"
+    },
+    {
+        "command": "ss --info --tcp '( sport = :http or dport = :http )'",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:22.946604"
+    },
+    {
+        "command": "screen -ls | grep 02Jan24_19_12_06_139879442074016 | cut -d. -f1",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:23.110016"
+    },
+    {
+        "command": "ps h --ppid 1756 -o pid",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:23.222623"
+    },
+    {
+        "command": "screen -S 02Jan24_19_12_06_139879442074016 -X stuff $'\\003'",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:23.349621"
+    },
+    {
+        "command": "kill -0 1757 2>/dev/null",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:23.462235"
+    },
+    {
+        "command": "kill -0 1757 2>/dev/null",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:24.566061"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:24.667794"
+    },
+    {
+        "command": "test -e /tmp/screen_02Jan24_19_12_06_139879442074016.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:24.773519"
+    },
+    {
+        "command": "cat /tmp/screen_02Jan24_19_12_06_139879442074016.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:24.869052"
+    },
+    {
+        "command": "rm /tmp/screen_02Jan24_19_12_06_139879442074016.log",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:24.967935"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:25.068299"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_demikernel/demikernel",
+        "time": "19:12:25.169397"
+    }
+]

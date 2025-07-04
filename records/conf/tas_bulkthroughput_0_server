@@ -1,0 +1,472 @@
+[
+    {
+        "command": "make -C apps/phttpd nophttpd",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:35.753450"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:35.855066"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:35.953699"
+    },
+    {
+        "command": "ethtool -l enp23s0f0np0",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.052774"
+    },
+    {
+        "command": "ethtool -L enp23s0f0np0 combined 1 || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.149568"
+    },
+    {
+        "command": "ethtool -l enp23s0f1np1",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.248846"
+    },
+    {
+        "command": "ethtool -L enp23s0f1np1 combined 1 || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.345980"
+    },
+    {
+        "command": "ethtool -l enp24s0f0",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.445823"
+    },
+    {
+        "command": "ethtool -L enp24s0f0 combined 1 || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.545650"
+    },
+    {
+        "command": "ethtool -l enp24s0f1",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.722731"
+    },
+    {
+        "command": "ethtool -L enp24s0f1 combined 1 || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.848566"
+    },
+    {
+        "command": "ethtool -l ens1f1",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:36.948569"
+    },
+    {
+        "command": "ethtool -L ens1f1 combined 1 || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:37.047842"
+    },
+    {
+        "command": "modprobe -r nvme",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:37.283274"
+    },
+    {
+        "command": "echo \"off\" > /sys/devices/system/cpu/smt/control",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:37.904134"
+    },
+    {
+        "command": "lscpu | grep \"^Thread(s) per core\" | awk \"{ print \\$4}\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.001220"
+    },
+    {
+        "command": "lscpu | grep \"^CPU(s)\" | awk \"{ print \\$2}\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.126301"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.231577"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{1,2}/online",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.331160"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/online",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.520577"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q mitigations=off",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.624317"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q intel_pstate=no_hwp",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.725373"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null 2>&1 || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.824247"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpuidle/current_driver",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:38.921924"
+    },
+    {
+        "command": "echo powersave | tee /sys/devices/system/cpu/cpu{0,1,2}/cpufreq/scaling_governor",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.020466"
+    },
+    {
+        "command": "echo performance | tee /sys/devices/system/cpu/cpu{0,1,2}/cpufreq/scaling_governor",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.120568"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.235859"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.333685"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.434536"
+    },
+    {
+        "command": "modprobe nvme",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.533550"
+    },
+    {
+        "command": "umount /dev/hugepages || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.813561"
+    },
+    {
+        "command": "mount -t hugetlbfs nodev /dev/hugepages",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:39.913944"
+    },
+    {
+        "command": "rm -rf /dev/hugepages/*",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:40.078913"
+    },
+    {
+        "command": "echo 2048 | tee /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:40.195313"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:40.295356"
+    },
+    {
+        "command": "rmmod igb_uio",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:40.396096"
+    },
+    {
+        "command": "modprobe -r i40e",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:40.520169"
+    },
+    {
+        "command": "modprobe i40e",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:40.836178"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:41.337128"
+    },
+    {
+        "command": "ethtool -i enp23s0f0np0 | grep \"driver:\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:41.434249"
+    },
+    {
+        "command": "ethtool -i enp23s0f1np1 | grep \"driver:\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:41.532461"
+    },
+    {
+        "command": "ethtool -i enp24s0f0 | grep \"driver:\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:41.630279"
+    },
+    {
+        "command": "ethtool -i enp24s0f1 | grep \"driver:\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:41.730133"
+    },
+    {
+        "command": "ethtool -i ens1f0 | grep \"driver:\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:41.827727"
+    },
+    {
+        "command": "ethtool -i ens1f1 | grep \"driver:\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:41.923996"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.025676"
+    },
+    {
+        "command": "cat /sys/class/net/enp23s0f0np0/address",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.122376"
+    },
+    {
+        "command": "cat /sys/class/net/enp23s0f1np1/address",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.217766"
+    },
+    {
+        "command": "cat /sys/class/net/enp24s0f0/address",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.315967"
+    },
+    {
+        "command": "cat /sys/class/net/enp24s0f1/address",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.417657"
+    },
+    {
+        "command": "cat /sys/class/net/ens1f0/address",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.516952"
+    },
+    {
+        "command": "ip -4 address show ens1f0",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.613388"
+    },
+    {
+        "command": "ip link set ens1f0 down",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.714399"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.872248"
+    },
+    {
+        "command": "insmod /root/stackbench_tas/dpdk-stable-19.11.13/build/kernel/linux/igb_uio/igb_uio.ko",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:43.968854"
+    },
+    {
+        "command": "python3 /root/stackbench_tas/dpdk-stable-19.11.13/usertools/dpdk-devbind.py --bind=igb_uio ens1f0",
+        "dir": "stackbench_tas/paste",
+        "time": "11:21:44.065612"
+    },
+    {
+        "command": "! test -e /tmp/screen_01Jan24_11_22_23_139980398655040.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:23.636741"
+    },
+    {
+        "command": "screen -dmS 01Jan24_11_22_23_139980398655040 -L -Logfile /tmp/screen_01Jan24_11_22_23_139980398655040.log sh -c \"/root/stackbench_tas/tas/tas/tas --shm-len=2147483648 --ip-addr=192.168.11.154/24 --fp-cores-max=1 --fp-no-ints --app-kin-len=2097152 --tcp-txbuf-len=2113536 --cc=const-rate --cc-const-rate=0\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:23.754334"
+    },
+    {
+        "command": "screen -S 01Jan24_11_22_23_139980398655040 -X logfile flush 0",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:23.858964"
+    },
+    {
+        "command": "! test -e /tmp/screen_01Jan24_11_22_26_139980398657200.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:26.960115"
+    },
+    {
+        "command": "screen -dmS 01Jan24_11_22_26_139980398657200 -L -Logfile /tmp/screen_01Jan24_11_22_26_139980398657200.log sh -c \"ulimit -n 1048576;  env LD_PRELOAD=../tas/lib/libtas_interpose.so ./apps/phttpd/nophttpd -P 80 -p 1 -s tas -a 2  -l 131072\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:27.056371"
+    },
+    {
+        "command": "screen -S 01Jan24_11_22_26_139980398657200 -X logfile flush 0",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:27.157597"
+    },
+    {
+        "command": "! test -e /tmp/screen_01Jan24_11_22_30_139980398656624.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:30.535618"
+    },
+    {
+        "command": "screen -dmS 01Jan24_11_22_30_139980398656624 -L -Logfile /tmp/screen_01Jan24_11_22_30_139980398656624.log sh -c \"mpstat -P ALL 2\"",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:30.631583"
+    },
+    {
+        "command": "screen -S 01Jan24_11_22_30_139980398656624 -X logfile flush 0",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:30.734209"
+    },
+    {
+        "command": "nstat -rn",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:30.833446"
+    },
+    {
+        "command": "screen -ls | grep 01Jan24_11_22_30_139980398656624 | cut -d. -f1",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.219092"
+    },
+    {
+        "command": "ps h --ppid 9065 -o pid",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.320157"
+    },
+    {
+        "command": "screen -S 01Jan24_11_22_30_139980398656624 -X stuff $'\\003'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.432150"
+    },
+    {
+        "command": "kill -0 9066 2>/dev/null",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.528626"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.629429"
+    },
+    {
+        "command": "test -e /tmp/screen_01Jan24_11_22_30_139980398656624.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.729661"
+    },
+    {
+        "command": "cat /tmp/screen_01Jan24_11_22_30_139980398656624.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.827709"
+    },
+    {
+        "command": "rm /tmp/screen_01Jan24_11_22_30_139980398656624.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:43.925783"
+    },
+    {
+        "command": "nstat -z 'Tcp*'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.024650"
+    },
+    {
+        "command": "ss --info --tcp '( sport = :http or dport = :http )'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.124843"
+    },
+    {
+        "command": "screen -ls | grep 01Jan24_11_22_26_139980398657200 | cut -d. -f1",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.236262"
+    },
+    {
+        "command": "ps h --ppid 9049 -o pid",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.344329"
+    },
+    {
+        "command": "screen -S 01Jan24_11_22_26_139980398657200 -X stuff $'\\003'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.456190"
+    },
+    {
+        "command": "kill -0 9050 2>/dev/null",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.556591"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.656763"
+    },
+    {
+        "command": "test -e /tmp/screen_01Jan24_11_22_26_139980398657200.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.753430"
+    },
+    {
+        "command": "cat /tmp/screen_01Jan24_11_22_26_139980398657200.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.852244"
+    },
+    {
+        "command": "rm /tmp/screen_01Jan24_11_22_26_139980398657200.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:44.949859"
+    },
+    {
+        "command": "screen -ls | grep 01Jan24_11_22_23_139980398655040 | cut -d. -f1",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.048696"
+    },
+    {
+        "command": "ps h --ppid 9029 -o pid",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.156594"
+    },
+    {
+        "command": "screen -S 01Jan24_11_22_23_139980398655040 -X stuff $'\\003'",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.264588"
+    },
+    {
+        "command": "kill -0 9030 2>/dev/null",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.364600"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.551516"
+    },
+    {
+        "command": "test -e /tmp/screen_01Jan24_11_22_23_139980398655040.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.677462"
+    },
+    {
+        "command": "cat /tmp/screen_01Jan24_11_22_23_139980398655040.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.774135"
+    },
+    {
+        "command": "rm /tmp/screen_01Jan24_11_22_23_139980398655040.log",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.871959"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:45.971098"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_tas/paste",
+        "time": "11:22:46.070261"
+    }
+]

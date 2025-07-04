@@ -1,0 +1,367 @@
+[
+    {
+        "command": "make -C apps/phttpd nophttpd",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:25.288823"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:27.821086"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:27.947793"
+    },
+    {
+        "command": "ethtool -l enp0s20f0u1u2c2",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:28.078619"
+    },
+    {
+        "command": "ethtool -l enp23s0f0",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:28.213692"
+    },
+    {
+        "command": "ethtool -L enp23s0f0 combined 1 || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:28.337667"
+    },
+    {
+        "command": "ethtool -l enp23s0f1",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:28.756363"
+    },
+    {
+        "command": "ethtool -L enp23s0f1 combined 1 || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:28.871548"
+    },
+    {
+        "command": "ethtool -l enp24s0f0",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:29.310239"
+    },
+    {
+        "command": "ethtool -L enp24s0f0 combined 1 || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:29.424640"
+    },
+    {
+        "command": "ethtool -l enp24s0f1",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:43.745004"
+    },
+    {
+        "command": "ethtool -L enp24s0f1 combined 1 || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:56.145058"
+    },
+    {
+        "command": "ethtool -l ens1f0",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:56.815503"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1 || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:56.925703"
+    },
+    {
+        "command": "ethtool -l ens1f1",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:57.254363"
+    },
+    {
+        "command": "ethtool -L ens1f1 combined 1 || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:57.382798"
+    },
+    {
+        "command": "ethtool -l virbr0",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:57.694067"
+    },
+    {
+        "command": "ethtool -l virbr0-nic",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:57.805878"
+    },
+    {
+        "command": "modprobe -r nvme",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:57.918570"
+    },
+    {
+        "command": "echo \"off\" > /sys/devices/system/cpu/smt/control",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:58.594911"
+    },
+    {
+        "command": "lscpu | grep \"^Thread(s) per core\" | awk \"{ print \\$4}\"",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:58.712785"
+    },
+    {
+        "command": "lscpu | grep \"^CPU(s)\" | awk \"{ print \\$2}\"",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:58.877015"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:59.009005"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/online",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:57:59.130429"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q mitigations=off",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:02.792279"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q intel_pstate=no_hwp",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:02.912680"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null 2>&1 || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.017956"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpuidle/current_driver",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.129479"
+    },
+    {
+        "command": "echo powersave | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.254533"
+    },
+    {
+        "command": "echo performance | tee /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.397077"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.521413"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.630690"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state2/disable",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.794815"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:03.945231"
+    },
+    {
+        "command": "modprobe nvme",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:04.043967"
+    },
+    {
+        "command": "! test -e /tmp/screen_01Feb24_13_58_23_140363964478080.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:23.783954"
+    },
+    {
+        "command": "screen -dmS 01Feb24_13_58_23_140363964478080 -L -Logfile /tmp/screen_01Feb24_13_58_23_140363964478080.log sh -c \"ulimit -n 1048576;  ./apps/phttpd/nophttpd -P 80 -s reflex -p 1  -l 64\"",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:23.880224"
+    },
+    {
+        "command": "screen -S 01Feb24_13_58_23_140363964478080 -X logfile flush 0",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:24.066980"
+    },
+    {
+        "command": "! test -e /tmp/screen_01Feb24_13_58_37_140363965176992.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:37.708220"
+    },
+    {
+        "command": "screen -dmS 01Feb24_13_58_37_140363965176992 -L -Logfile /tmp/screen_01Feb24_13_58_37_140363965176992.log sh -c \"mpstat -P ALL 2\"",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:37.821433"
+    },
+    {
+        "command": "screen -S 01Feb24_13_58_37_140363965176992 -X logfile flush 0",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:37.957048"
+    },
+    {
+        "command": "nstat -rn",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:38.072588"
+    },
+    {
+        "command": "screen -ls | grep 01Feb24_13_58_37_140363965176992 | cut -d. -f1",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:57.249203"
+    },
+    {
+        "command": "ps h --ppid 2671 -o pid",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:57.365119"
+    },
+    {
+        "command": "screen -S 01Feb24_13_58_37_140363965176992 -X stuff $'\\003'",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:57.494270"
+    },
+    {
+        "command": "kill -0 2672 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:57.616797"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:57.733053"
+    },
+    {
+        "command": "test -e /tmp/screen_01Feb24_13_58_37_140363965176992.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:57.849228"
+    },
+    {
+        "command": "cat /tmp/screen_01Feb24_13_58_37_140363965176992.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:57.952758"
+    },
+    {
+        "command": "rm /tmp/screen_01Feb24_13_58_37_140363965176992.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:58.073366"
+    },
+    {
+        "command": "nstat -z 'Tcp*'",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:58.178425"
+    },
+    {
+        "command": "ss --info --tcp '( sport = :http or dport = :http )'",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:58.358849"
+    },
+    {
+        "command": "screen -ls | grep 01Feb24_13_58_23_140363964478080 | cut -d. -f1",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:58.535692"
+    },
+    {
+        "command": "ps h --ppid 2659 -o pid",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:58.644105"
+    },
+    {
+        "command": "screen -S 01Feb24_13_58_23_140363964478080 -X stuff $'\\003'",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:58.761911"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:58.876210"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:58:59.992136"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:01.108391"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:02.321027"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:03.444079"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:04.556345"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:05.728039"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:06.856632"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:07.973673"
+    },
+    {
+        "command": "kill -0 2660 2>/dev/null",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:09.150047"
+    },
+    {
+        "command": "kill 2660",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:10.276492"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:13.390898"
+    },
+    {
+        "command": "test -e /tmp/screen_01Feb24_13_58_23_140363964478080.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:13.488070"
+    },
+    {
+        "command": "cat /tmp/screen_01Feb24_13_58_23_140363964478080.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:13.580931"
+    },
+    {
+        "command": "rm /tmp/screen_01Feb24_13_58_23_140363964478080.log",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:13.677631"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:13.773954"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state1/disable",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:13.874055"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47}/cpuidle/state2/disable",
+        "dir": "stackbench_reflex/paste",
+        "time": "13:59:13.982227"
+    }
+]

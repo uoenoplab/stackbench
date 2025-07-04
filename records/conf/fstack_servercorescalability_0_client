@@ -1,0 +1,557 @@
+[
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "mtcp_wrk",
+        "time": "13:39:45.277660"
+    },
+    {
+        "command": "ls /sys/class/net/",
+        "dir": "mtcp_wrk",
+        "time": "13:39:45.388394"
+    },
+    {
+        "command": "ethtool -l enp24s0f0",
+        "dir": "mtcp_wrk",
+        "time": "13:39:45.493718"
+    },
+    {
+        "command": "ethtool -L enp24s0f0 combined 1 || :",
+        "dir": "mtcp_wrk",
+        "time": "13:39:45.596652"
+    },
+    {
+        "command": "ethtool -l enp24s0f1",
+        "dir": "mtcp_wrk",
+        "time": "13:39:45.704554"
+    },
+    {
+        "command": "ethtool -L enp24s0f1 combined 1 || :",
+        "dir": "mtcp_wrk",
+        "time": "13:39:45.806258"
+    },
+    {
+        "command": "ethtool -l ens1f0",
+        "dir": "mtcp_wrk",
+        "time": "13:39:45.910778"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 1 || :",
+        "dir": "mtcp_wrk",
+        "time": "13:39:46.010796"
+    },
+    {
+        "command": "ethtool -l ens1f1",
+        "dir": "mtcp_wrk",
+        "time": "13:39:46.271794"
+    },
+    {
+        "command": "ethtool -L ens1f1 combined 1 || :",
+        "dir": "mtcp_wrk",
+        "time": "13:39:46.373782"
+    },
+    {
+        "command": "modprobe -r nvme",
+        "dir": "mtcp_wrk",
+        "time": "13:39:46.550489"
+    },
+    {
+        "command": "echo \"off\" > /sys/devices/system/cpu/smt/control",
+        "dir": "mtcp_wrk",
+        "time": "13:39:47.267236"
+    },
+    {
+        "command": "lscpu | grep \"^Thread(s) per core\" | awk \"{ print \\$4}\"",
+        "dir": "mtcp_wrk",
+        "time": "13:39:47.372093"
+    },
+    {
+        "command": "lscpu | grep \"^CPU(s)\" | awk \"{ print \\$2}\"",
+        "dir": "mtcp_wrk",
+        "time": "13:39:47.505230"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu",
+        "dir": "mtcp_wrk",
+        "time": "13:39:47.640841"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23}/online",
+        "dir": "mtcp_wrk",
+        "time": "13:39:47.745012"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/online",
+        "dir": "mtcp_wrk",
+        "time": "13:39:47.864158"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q mitigations=off",
+        "dir": "mtcp_wrk",
+        "time": "13:39:47.976508"
+    },
+    {
+        "command": "cat /proc/cmdline | grep -q intel_pstate=no_hwp",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.085699"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/intel_pstate/no_turbo > /dev/null 2>&1 || :",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.190708"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpuidle/current_driver",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.296045"
+    },
+    {
+        "command": "echo powersave | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23}/cpufreq/scaling_governor",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.401029"
+    },
+    {
+        "command": "echo performance | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23}/cpufreq/scaling_governor",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.508887"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.706626"
+    },
+    {
+        "command": "echo 1 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/cpuidle/state1/disable",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.840479"
+    },
+    {
+        "command": "cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq",
+        "dir": "mtcp_wrk",
+        "time": "13:39:48.948515"
+    },
+    {
+        "command": "modprobe nvme",
+        "dir": "mtcp_wrk",
+        "time": "13:39:49.047977"
+    },
+    {
+        "command": "lsmod | awk '{print $1}'",
+        "dir": "mtcp_wrk",
+        "time": "13:39:52.829611"
+    },
+    {
+        "command": "modprobe -r i40e_netmap",
+        "dir": "mtcp_wrk",
+        "time": "13:39:52.934430"
+    },
+    {
+        "command": "modprobe i40e_netmap",
+        "dir": "mtcp_wrk",
+        "time": "13:39:55.343095"
+    },
+    {
+        "command": "ip -4 address show ens1f0",
+        "dir": "mtcp_wrk",
+        "time": "13:39:55.931994"
+    },
+    {
+        "command": "ip addr add 192.168.11.162/24 dev ens1f0",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.102509"
+    },
+    {
+        "command": "ip link set ens1f0 up",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.241309"
+    },
+    {
+        "command": "ethtool  ens1f0 | grep \"Link detected:\"",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.365269"
+    },
+    {
+        "command": "ethtool -A ens1f0 rx off",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.470015"
+    },
+    {
+        "command": "ethtool -A ens1f0 tx off",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.575202"
+    },
+    {
+        "command": "ethtool -K ens1f0 lro off",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.686165"
+    },
+    {
+        "command": "ethtool -K ens1f0 gro off",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.795402"
+    },
+    {
+        "command": "ethtool -L ens1f0 combined 24",
+        "dir": "mtcp_wrk",
+        "time": "13:39:56.900876"
+    },
+    {
+        "command": "cat /proc/interrupts | grep ens1f0-TxRx-",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.005436"
+    },
+    {
+        "command": "echo 0 > /proc/irq/66/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.112400"
+    },
+    {
+        "command": "echo 1 > /proc/irq/67/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.213535"
+    },
+    {
+        "command": "echo 2 > /proc/irq/68/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.314881"
+    },
+    {
+        "command": "echo 3 > /proc/irq/69/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.415859"
+    },
+    {
+        "command": "echo 4 > /proc/irq/70/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.516281"
+    },
+    {
+        "command": "echo 5 > /proc/irq/168/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.618408"
+    },
+    {
+        "command": "echo 6 > /proc/irq/169/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.719097"
+    },
+    {
+        "command": "echo 7 > /proc/irq/170/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.818758"
+    },
+    {
+        "command": "echo 8 > /proc/irq/171/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:57.921008"
+    },
+    {
+        "command": "echo 9 > /proc/irq/172/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.024549"
+    },
+    {
+        "command": "echo 10 > /proc/irq/173/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.127342"
+    },
+    {
+        "command": "echo 11 > /proc/irq/174/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.229448"
+    },
+    {
+        "command": "echo 12 > /proc/irq/175/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.328435"
+    },
+    {
+        "command": "echo 13 > /proc/irq/176/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.428101"
+    },
+    {
+        "command": "echo 14 > /proc/irq/177/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.529530"
+    },
+    {
+        "command": "echo 15 > /proc/irq/178/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.630159"
+    },
+    {
+        "command": "echo 16 > /proc/irq/179/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.731766"
+    },
+    {
+        "command": "echo 17 > /proc/irq/180/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.834468"
+    },
+    {
+        "command": "echo 18 > /proc/irq/181/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:58.934956"
+    },
+    {
+        "command": "echo 19 > /proc/irq/182/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:59.037624"
+    },
+    {
+        "command": "echo 20 > /proc/irq/183/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:59.139452"
+    },
+    {
+        "command": "echo 21 > /proc/irq/184/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:59.242519"
+    },
+    {
+        "command": "echo 22 > /proc/irq/185/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:59.342521"
+    },
+    {
+        "command": "echo 23 > /proc/irq/186/smp_affinity_list",
+        "dir": "mtcp_wrk",
+        "time": "13:39:59.441454"
+    },
+    {
+        "command": "ethtool -G ens1f0 rx 2048",
+        "dir": "mtcp_wrk",
+        "time": "13:39:59.739739"
+    },
+    {
+        "command": "ethtool -G ens1f0 tx 2048",
+        "dir": "mtcp_wrk",
+        "time": "13:39:59.973576"
+    },
+    {
+        "command": "ethtool -K ens1f0 tso off",
+        "dir": "mtcp_wrk",
+        "time": "13:40:00.170721"
+    },
+    {
+        "command": "ethtool -X ens1f0 hkey 05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:05:00:00:00:00:00:00:00:00:00:00:00:00",
+        "dir": "mtcp_wrk",
+        "time": "13:40:00.278251"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "mtcp_wrk",
+        "time": "13:40:00.848261"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "mtcp_wrk",
+        "time": "13:40:07.043105"
+    },
+    {
+        "command": "curl -m 4 -s http://192.168.11.154:80/",
+        "dir": "mtcp_wrk",
+        "time": "13:40:14.164875"
+    },
+    {
+        "command": "! test -e /tmp/screen_01Feb24_13_40_17_140363964253904.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:17.760377"
+    },
+    {
+        "command": "screen -dmS 01Feb24_13_40_17_140363964253904 -L -Logfile /tmp/screen_01Feb24_13_40_17_140363964253904.log sh -c \"mpstat -P ALL 2\"",
+        "dir": "mtcp_wrk",
+        "time": "13:40:17.859444"
+    },
+    {
+        "command": "screen -S 01Feb24_13_40_17_140363964253904 -X logfile flush 0",
+        "dir": "mtcp_wrk",
+        "time": "13:40:17.966176"
+    },
+    {
+        "command": "nstat -rn",
+        "dir": "mtcp_wrk",
+        "time": "13:40:18.072002"
+    },
+    {
+        "command": "! test -e /tmp/screen_01Feb24_13_40_18_140363964619312.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:18.176723"
+    },
+    {
+        "command": "screen -dmS 01Feb24_13_40_18_140363964619312 -L -Logfile /tmp/screen_01Feb24_13_40_18_140363964619312.log sh -c \"ulimit -n 1048576;  ./wrk --latency -d 8 -c 2400 -t 24 http://192.168.11.154:80/; sleep 3\"",
+        "dir": "mtcp_wrk",
+        "time": "13:40:18.277123"
+    },
+    {
+        "command": "screen -S 01Feb24_13_40_18_140363964619312 -X logfile flush 0",
+        "dir": "mtcp_wrk",
+        "time": "13:40:18.385925"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:18.490894"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:19.595344"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:20.705312"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:21.814725"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:22.918445"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:24.023583"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:25.130960"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:26.237919"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:27.342547"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:28.450991"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:29.558243"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:30.663270"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:31.767845"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:32.874850"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:33.978635"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:35.081104"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:36.184320"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:36.286094"
+    },
+    {
+        "command": "test -e /tmp/screen_01Feb24_13_40_18_140363964619312.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:36.389558"
+    },
+    {
+        "command": "cat /tmp/screen_01Feb24_13_40_18_140363964619312.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:36.489022"
+    },
+    {
+        "command": "rm /tmp/screen_01Feb24_13_40_18_140363964619312.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:36.603996"
+    },
+    {
+        "command": "screen -ls | grep 01Feb24_13_40_17_140363964253904 | cut -d. -f1",
+        "dir": "mtcp_wrk",
+        "time": "13:40:38.910726"
+    },
+    {
+        "command": "ps h --ppid 50451 -o pid",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.013134"
+    },
+    {
+        "command": "screen -S 01Feb24_13_40_17_140363964253904 -X stuff $'\\003'",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.132340"
+    },
+    {
+        "command": "kill -0 50452 2>/dev/null",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.238475"
+    },
+    {
+        "command": "screen -ls || :",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.411650"
+    },
+    {
+        "command": "test -e /tmp/screen_01Feb24_13_40_17_140363964253904.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.549612"
+    },
+    {
+        "command": "cat /tmp/screen_01Feb24_13_40_17_140363964253904.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.652447"
+    },
+    {
+        "command": "rm /tmp/screen_01Feb24_13_40_17_140363964253904.log",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.769284"
+    },
+    {
+        "command": "nstat -z 'Tcp*'",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.865474"
+    },
+    {
+        "command": "ss --info --tcp '( sport = :http or dport = :http )'",
+        "dir": "mtcp_wrk",
+        "time": "13:40:39.970128"
+    },
+    {
+        "command": "ls /sys/devices/system/cpu/cpu0/cpuidle/",
+        "dir": "mtcp_wrk",
+        "time": "13:40:40.075750"
+    },
+    {
+        "command": "echo 0 | tee /sys/devices/system/cpu/cpu{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95}/cpuidle/state1/disable",
+        "dir": "mtcp_wrk",
+        "time": "13:40:40.177637"
+    }
+]
