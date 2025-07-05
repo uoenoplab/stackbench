@@ -10,6 +10,7 @@ titled above.
 - src/tas
 
 Modifications described in Section 2.
+Build process follows the original code.
 
 ## Server tool
 - src/httpd
